@@ -47,7 +47,7 @@ CRXB.util.registerPreferencesDialog = function() {
                 }
             });
 
-            this.preferences = GM_getValue('profile:preferences');
+            this.preferences = GM_getValue('profile:preferences') || {};
             this.colorControls = [];
             for (let colorSchemeName of COLOR_SCHEMES) {
                 const colorSchemeSrc = CRXB.util.getCurrentColorScheme(this.preferences, colorSchemeName);
