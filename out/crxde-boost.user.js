@@ -2,7 +2,7 @@
 
 // @name         CRX/DE Boost
 // @namespace    http://aem.velwetowl.org/
-// @version      0.1
+// @version      0.1.1
 // @description  Makes CRX/DE passable for an AEM developer environment
 // @author       Stephen Velwetowl
 
