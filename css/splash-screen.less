@@ -1,0 +1,34 @@
+html, body {
+  height: 100%;
+  position: relative;
+  margin: 0;
+  background-color: @COLOR_WORKSPACE_BG;
+}
+
+#loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  height: 100px;
+}
+
+#loading,
+.homepanel .x-panel-body {
+  background: no-repeat center url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 485 88"><path fill="%23@COLOR_TOOLS_BG_NOHASH" d="M248 0l18 22 18-22h30l-34 40 39 47h-30l-22-27-22 27h-63l-24-30h-21v30h-26V0h63c16 0 32 11 32 27 0 13-8 21-19 26l26 34 39-45-35-42h33zM1 43C0 73 21 86 51 87c26 0 46-10 53-29H74c-5 6-13 9-21 9-19 0-25-14-25-24s6-25 24-25c9 0 19 6 24 11h27C97 9 78 0 50 0 21 0 1 12 1 42zm135-8h29c5 0 13-2 13-8s-8-8-13-8h-29v16zm193 23c8 14 16 19 29 19 8 0 14-2 19-5-10 0-13-2-13-7 0-3 3-7 7-7s11 3 18 3c8 0 16-2 22-13-1 26-18 41-45 41h-37V59zm0-58h37c27 0 45 13 45 45v3c-6 2-11 3-15 3-11 0-16-7-16-13 0-5 3-10 12-10-4-3-8-5-12-5-7 0-12 4-18 4-4 0-7-3-7-7 0-6 5-8 14-8-3-2-9-3-14-3-15 1-23 3-26 18V-1zm0 40c2-11 12-16 20-16-6 3-7 7-7 8 0 10 20-1 33 17-6-3-12-4-16-4-9 0-15 5-15 10 0 4 3 8 10 10-10 0-26-11-25-25zm88-40h66v10h-53v31h40v10h-40v27h56v10h-69V1z"/></svg>');
+}
+
+#loading:after {
+  display: inline-block;
+  content: '';
+  background: no-repeat center url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 16"><path fill="%23@COLOR_TOOLS_BG_NOHASH" fill-opacity=".42" d="M6.4 4.8A3.2 3.2 0 113.2 8a3.2 3.2 0 013.2-3.2zm12.8 0A3.2 3.2 0 1116 8a3.2 3.2 0 013.2-3.2zm12.8 0A3.2 3.2 0 1128.8 8 3.2 3.2 0 0132 4.8zm12.8 0A3.2 3.2 0 1141.6 8a3.2 3.2 0 013.2-3.2zm12.8 0A3.2 3.2 0 1154.4 8a3.2 3.2 0 013.2-3.2zm12.8 0A3.2 3.2 0 1167.2 8a3.2 3.2 0 013.2-3.2zm12.8 0A3.2 3.2 0 1180 8a3.2 3.2 0 013.2-3.2zm12.8 0A3.2 3.2 0 1192.8 8 3.2 3.2 0 0196 4.8zm12.8 0a3.2 3.2 0 11-3.2 3.2 3.2 3.2 0 013.2-3.2zm12.8 0a3.2 3.2 0 11-3.2 3.2 3.2 3.2 0 013.2-3.2z"/><g><path fill="%23@COLOR_TOOLS_BG_NOHASH" d="M-42.7 3.84A4.16 4.16 0 01-38.54 8a4.16 4.16 0 01-4.16 4.16A4.16 4.16 0 01-46.86 8a4.16 4.16 0 014.16-4.16zm12.8-.64A4.8 4.8 0 01-25.1 8a4.8 4.8 0 01-4.8 4.8A4.8 4.8 0 01-34.7 8a4.8 4.8 0 014.8-4.8zm12.8-.64A5.44 5.44 0 01-11.66 8a5.44 5.44 0 01-5.44 5.44A5.44 5.44 0 01-22.54 8a5.44 5.44 0 015.44-5.44z"/><animateTransform attributeName="transform" type="translate" values="23 0;36 0;49 0;62 0;74.5 0;87.5 0;100 0;113 0;125.5 0;138.5 0;151.5 0;164.5 0;178 0" calcMode="discrete" dur="1690ms" repeatCount="indefinite"/></g></svg>');
+  width: 400px;
+  height: 24px;
+  transform: translate(0, 97px);
+}
+
+#history-form,
+#load-indicator {
+  display: none;
+}
