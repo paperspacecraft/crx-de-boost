@@ -2,7 +2,7 @@
 
 // @name         CRX/DE Boost
 // @namespace    http://aem.velwetowl.org/
-// @version      0.1.1
+// @version      0.1.2
 // @description  Makes CRX/DE passable for an AEM developer environment
 // @author       Stephen Velwetowl
 
@@ -2444,7 +2444,7 @@ CRXB.util.getOpenPageActions = function() {
     CRX.ide.OpenPageViewAction.checkActive = function() {
         const currentNode = CRXB.util.getCurrent('node');
         const isPage = currentNode.ui.iconNode.classList.contains('page');
-        const disabled = !currentNode || !isPage || !GM_getValue('profile:settings')['prefer-edit-mode'];
+        const disabled = !currentNode || !isPage || !(GM_getValue('profile:settings') || {})['prefer-edit-mode'];
         this.setDisabled(disabled);
     };
 
@@ -2463,7 +2463,7 @@ CRXB.util.getOpenPageActions = function() {
     CRX.ide.OpenPageEditAction.checkActive = function() {
         const currentNode = CRXB.util.getCurrent('node');
         const isPage = currentNode.ui.iconNode.classList.contains('page');
-        const disabled = !currentNode || !isPage || GM_getValue('profile:settings')['prefer-edit-mode'];
+        const disabled = !currentNode || !isPage || (GM_getValue('profile:settings') || {})['prefer-edit-mode'];
         this.setDisabled(disabled);
     };
 
@@ -3891,7 +3891,7 @@ CRXB.tweaks.openPageInEditMode = function() {
     Ext.override(CRX.ide.PageEditor, {
         open: function() {
             const node = CRXB.util.getCurrent().node;
-            const openInEditMode = GM_getValue('profile:settings')['prefer-edit-mode'];
+            const openInEditMode = (GM_getValue('profile:settings') || {})['prefer-edit-mode'];
             const [openStraight, openEdit] = CRXB.util.getOpenPageActions();
 
             if (openInEditMode) {
@@ -4210,13 +4210,14 @@ CRXB.tweaks.applyStyles = function(scope = ['splash', 'default']) {
     }
 
     const oldFavicon = document.querySelector('link[rel="icon"]');
-    const newFavicon = oldFavicon.cloneNode(false);
-    newFavicon.href = CRXB.settings.get('favicon').replace(/%23111/, '%23' + CRXB.styles.COLOR_TOOLS_BG.substring(1));
-    newFavicon.type = 'image/svg+xml';
-    document.querySelectorAll('[rel~="icon"]').forEach(element => element.parentNode.removeChild(element));
-    document.head.appendChild(newFavicon);
+    if (oldFavicon) {
+        const newFavicon = oldFavicon.cloneNode(false);
+        newFavicon.href = CRXB.settings.get('favicon').replace(/%23111/, '%23' + CRXB.styles.COLOR_TOOLS_BG.substring(1));
+        newFavicon.type = 'image/svg+xml';
+        document.querySelectorAll('[rel~="icon"]').forEach(element => element.parentNode.removeChild(element));
+        document.head.appendChild(newFavicon);
+    }
 
-    console.log(CRXB.styles);
     CRXB.styles.install(scope);
 };
 

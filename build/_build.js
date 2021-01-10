@@ -13,7 +13,10 @@ const UTILS_PATH = './util';
 const CSS_PATH = './css';
 const SVG_PATH = './svg/out';
 
+const OUT_FILE_PATH = './out/crxde-boost.user.js';
+
 const ENCODING = 'UTF8';
+const CURRENT_VERSION = '0.1.2';
 
 
 const BOOKMARK_SETTINGS = {
@@ -221,12 +224,16 @@ function getDirContents(dir) {
    ----------- */
 
 try {
-    fs.unlinkSync('./out/crxde-boost.user.js');
+    fs.unlinkSync(OUT_FILE_PATH);
 } catch(e) {}
+
+const header = getFileContents('header.js', true)
+    .replace(/\/\/\s*@version\s+([\d.]+)/, '// @version      ' + CURRENT_VERSION);
+
 const stream = fs.createWriteStream('./out/crxde-boost.user.js', {flags: 'a'});
 
 [
-    getFileContents('header.js', true),
+    header,
     getDirContents(CLASSES_PATH),
     getDirContents(DIALOGS_PATH),
     getDirContents(UTILS_PATH),
