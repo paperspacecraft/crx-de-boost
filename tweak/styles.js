@@ -23,12 +23,13 @@ CRXB.tweaks.applyStyles = function(scope = ['splash', 'default']) {
 
     // Apply favicon
     const oldFavicon = document.querySelector('link[rel="icon"]');
-    const newFavicon = oldFavicon.cloneNode(false);
-    newFavicon.href = CRXB.settings.get('favicon').replace(/%23111/, '%23' + CRXB.styles.COLOR_TOOLS_BG.substring(1));
-    newFavicon.type = 'image/svg+xml';
-    document.querySelectorAll('[rel~="icon"]').forEach(element => element.parentNode.removeChild(element));
-    document.head.appendChild(newFavicon);
+    if (oldFavicon) {
+        const newFavicon = oldFavicon.cloneNode(false);
+        newFavicon.href = CRXB.settings.get('favicon').replace(/%23111/, '%23' + CRXB.styles.COLOR_TOOLS_BG.substring(1));
+        newFavicon.type = 'image/svg+xml';
+        document.querySelectorAll('[rel~="icon"]').forEach(element => element.parentNode.removeChild(element));
+        document.head.appendChild(newFavicon);
+    }
 
-    console.log(CRXB.styles);
     CRXB.styles.install(scope);
 };
