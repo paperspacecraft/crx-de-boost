@@ -1,7 +1,6 @@
 class CrxPackager {
 
     static MAX_BLOB_SIZE = 20 * 1024 * 1024; // 20 MB limit for storing downloaded package in memory
-    // static DEFAULT_TIMEOUT = 10 * 60 * 1000; // 10 min to complete a download or upload
 
     constructor(config) {
         this.config = config || {};
@@ -20,8 +19,6 @@ class CrxPackager {
             build: '/crx/packmgr/service/script.html',
             download: '/crx/packmgr/download.jsp'
         }, true);
-
-        // this.config.timeout = this.config.timeout || CrxPackager.DEFAULT_TIMEOUT;
     }
 
     //
@@ -33,7 +30,7 @@ class CrxPackager {
         path = decodeURIComponent(path);
         const argument = {
             jcrPath: path,
-            packageName: (window.location.hostname + '-' + path).replace(/[\/:]/gi, '-') + '-' + new Date().getTime(),
+            packageName: (window.location.hostname + '-' + path).replace(/[\/:.,]+/gi, '-') + '-' + new Date().getTime(),
             stage: 'Creating package',
             completion: 0
         };
@@ -199,9 +196,10 @@ class CrxPackager {
             });
             let uploadResponseText = uploadResponse.ok ? await uploadResponse.text() : '';
             uploadResponseText = CrxPackager.normalizeHtml(uploadResponseText);
-            if (CrxPackager.extractInlineMessage(uploadResponseText, 'status') !== 'ok') {
+            const uploadResponseStatusValue = CrxPackager.extractInlineMessage(uploadResponseText, 'status');
+            if (uploadResponseStatusValue !== 'ok') {
                 argument.httpStatus = uploadResponse.status;
-                argument.message = CrxPackager.truncate(uploadResponseText, 300) || uploadResponse.statusText;
+                argument.message = CrxPackager.truncate(uploadResponseStatusValue || uploadResponseText, 300) || uploadResponse.statusText;
                 return this.handleFailure(argument);
             }
 

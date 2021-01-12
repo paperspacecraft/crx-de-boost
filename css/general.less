@@ -442,7 +442,7 @@ ul.x-tab-strip li.x-tab-strip-active {
     display: table-cell;
     white-space: nowrap;
     padding-right: 20px;
-    width: 100px;
+    width: 60px;
     color: @COLOR_TOOLS_BG;
     font-weight: bold;
 }
@@ -453,7 +453,7 @@ ul.x-tab-strip li.x-tab-strip-active {
 }
 
 .homepanel #navmenu>li>ul>li {
-    display: inline;
+    display: inline-block;
     margin-right: 5px;
 }
 
@@ -471,6 +471,23 @@ ul.x-tab-strip li.x-tab-strip-active {
     background-color: @COLOR_WORKSPACE_SHADE;
     border-radius: 3px;
     transition: background-color 0.3s;
+}
+
+.homepanel #navmenu .logLink {
+    text-transform: capitalize;
+}
+
+.homepanel #navmenu .logLink em {
+    color: @COLOR_TOOLS_HIGH;
+}
+
+#crxb-version {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    color: @COLOR_WORKSPACE_SHADE;
+    font-weight: bold;
+    font-size: .9em;
 }
 
 /* ----------------
