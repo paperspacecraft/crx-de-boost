@@ -10,7 +10,7 @@ CRXB.util.registerSearchPanel = function() {
 
         constructor: function(config) {
 
-            this.QUERY_LIMIT = (GM_getValue('profile:settings') || {})['search-page-size'] || 30;
+            this.QUERY_LIMIT = CRXB.settings.get('search-page-size') || 30;
 
             this.store = new Ext.data.JsonStore({
                 autoDestroy: true,

@@ -90,8 +90,8 @@ CRXB.tweaks.convertAddressBarToOmnibox = function() {
             if (/^\/editor\.html/i.test(resultingValue)) {
                 resultingValue = resultingValue.substring('/editor.html'.length);
             }
-            const autoPattern = (GM_getValue('profile:settings') || {})['omnibox-auto-pattern'];
-            const autoReplacement = (GM_getValue('profile:settings') || {})['omnibox-auto-replacement'];
+            const autoPattern = CRXB.settings.get('omnibox-auto-pattern');
+            const autoReplacement = CRXB.settings.get('omnibox-auto-replacement');
             if (autoPattern && autoReplacement) {
                 const rx =  new RegExp(autoPattern);
                 if (rx.test(resultingValue)) {

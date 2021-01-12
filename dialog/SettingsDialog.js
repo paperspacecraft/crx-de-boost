@@ -7,7 +7,7 @@ CRXB.util.registerSettingsDialog = function() {
         title: 'Settings',
         modal: true,
         width: 420,
-        height: 340,
+        height: 380,
         layout: 'fit',
 
         constructor: function(config) {
@@ -32,9 +32,12 @@ CRXB.util.registerSettingsDialog = function() {
             this.openInEditMode = new Ext.form.Checkbox({
                 id: 'prefer-edit-mode',
                 fieldLabel: 'Open pages in<br>editor by dblclick',
-                minValue: 1
             });
 
+            this.allowDragging = new Ext.form.Checkbox({
+                id: 'allow-dragging',
+                fieldLabel: 'Allow dragging nodes',
+            });
 
             Ext.applyIf(config, {
                 items: {
@@ -50,6 +53,14 @@ CRXB.util.registerSettingsDialog = function() {
                         {
                             xtype: 'label',
                             cls: 'dialog-section',
+                            text: 'Repository tree settings',
+                            anchor: false,
+                        },
+                        this.openInEditMode,
+                        this.allowDragging,
+                        {
+                            xtype: 'label',
+                            cls: 'dialog-section',
                             text: 'Omnibox settings',
                             anchor: false,
                         },
@@ -62,13 +73,6 @@ CRXB.util.registerSettingsDialog = function() {
                             anchor: false,
                         },
                         this.searchPanelSize,
-                        {
-                            xtype: 'label',
-                            cls: 'dialog-section',
-                            text: 'Repository tree settings',
-                            anchor: false,
-                        },
-                        this.openInEditMode
                     ],
                 },
                 buttonAlign: 'center',
@@ -92,12 +96,11 @@ CRXB.util.registerSettingsDialog = function() {
         initComponent: function() {
             CRX.ide.SettingsDialog.superclass.initComponent.call(this);
             const panel = this.items.get(0);
-            const settings = GM_getValue('profile:settings') || {};
             panel.items.each(function(item) {
                 if (!item.setValue) {
                     return;
                 }
-                item.setValue(settings[item.id] || item.defaultValue);
+                item.setValue(CRXB.settings.get(item.id) || item.defaultValue);
                 item.originalValue = item.getValue();
             });
         },
@@ -114,7 +117,7 @@ CRXB.util.registerSettingsDialog = function() {
                 }
                 settings[item.id] = item.getValue();
             });
-            GM_setValue('profile:settings', settings);
+            CRXB.settings.update(settings).save();
         },
 
         isDirty: function() {

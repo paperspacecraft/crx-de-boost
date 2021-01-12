@@ -16,7 +16,7 @@ const SVG_PATH = './svg/out';
 const OUT_FILE_PATH = './out/crxde-boost.user.js';
 
 const ENCODING = 'UTF8';
-const CURRENT_VERSION = '0.1.3';
+const CURRENT_VERSION = '0.1.4';
 
 
 const BOOKMARK_SETTINGS = {

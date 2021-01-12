@@ -75,13 +75,6 @@ CRXB.tweaks.modifyRepositoryTree = function() {
                 // Make node editor not pop up on single click
                 this.un('beforeclick', this.editor.beforeNodeClick, this.editor);
 
-                // Remove standard dblclick action
-/*
-                const dblclickFn = this.events['dblclick'].listeners.map(listener => listener.fn).filter(fn => fn.name === 'dblclick');
-                if (dblclickFn) {
-                    this.un('dblclick', dblclickFn[0], this);
-                }
-*/
             });
 
             // Lock the dropped node from being dragged again unless explicitly allowed

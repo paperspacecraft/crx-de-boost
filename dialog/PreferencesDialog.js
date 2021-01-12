@@ -47,10 +47,10 @@ CRXB.util.registerPreferencesDialog = function() {
                 }
             });
 
-            this.preferences = GM_getValue('profile:preferences') || {};
+            this.preferences = CRXB.settings.get('instance-preferences');
             this.colorControls = [];
             for (let colorSchemeName of COLOR_SCHEMES) {
-                const colorSchemeSrc = CRXB.util.getCurrentColorScheme(this.preferences, colorSchemeName);
+                const colorSchemeSrc = CRXB.util.getCurrentColorScheme(colorSchemeName);
                 this.colorControls.push(...Object.keys(colorSchemeSrc)
                     .filter(k => !/^_/.test(k))
                     .map(k => {return {
@@ -141,7 +141,7 @@ CRXB.util.registerPreferencesDialog = function() {
                             }
                             if (this.save()) {
                                 CRXB.tweaks.applyStyles();
-                                Ext.getCmp('environment').setText(CRXB.util.getEnvironmentLabel(this.preferences));
+                                Ext.getCmp('environment').setText(CRXB.util.getEnvironmentLabel());
                                 Ext.getCmp(CRX.ide.MAIN_ID).items.get(0).items.get(0).doLayout();
                             }
                             this.hide();
@@ -180,7 +180,7 @@ CRXB.util.registerPreferencesDialog = function() {
 
             const panel = this.items.get(0);
             for (let colorSchemeName of COLOR_SCHEMES) {
-                const colorSchemeSrc = CRXB.util.getCurrentColorScheme(this.preferences, colorSchemeName);
+                const colorSchemeSrc = CRXB.util.getCurrentColorScheme(colorSchemeName);
                 Object.keys(colorSchemeSrc).forEach(k => {
                     const swatch = panel.items.get(`color-control--${colorSchemeName}-${k}`);
                     swatch.setValue(colorSchemeSrc[k]);
@@ -215,7 +215,7 @@ CRXB.util.registerPreferencesDialog = function() {
                     this.preferences.customColors[schemeName] = this.preferences.customColors[schemeName] || {};
                     this.preferences.customColors[schemeName][colorKey] = item.getValue()
                 });
-            GM_setValue('profile:preferences', this.preferences);
+            CRXB.settings.save();
             return true;
         },
 
@@ -231,7 +231,7 @@ CRXB.util.registerPreferencesDialog = function() {
         },
 
         resetColors: function() {
-            const colorSchemeSrc = CRXB.util.getCurrentColorScheme(this.preferences, this.colorScheme.getValue(), true);
+            const colorSchemeSrc = CRXB.util.getCurrentColorScheme(this.colorScheme.getValue(), true);
             this.items.get(0).items
                 .filterBy(item => item.initialConfig.cls === 'color-swatch' && item.name.indexOf(this.colorScheme.getValue()) === 0)
                 .each(item => {

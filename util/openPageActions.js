@@ -17,7 +17,7 @@ CRXB.util.getOpenPageActions = function() {
     CRX.ide.OpenPageViewAction.checkActive = function() {
         const currentNode = CRXB.util.getCurrent('node');
         const isPage = currentNode.ui.iconNode.classList.contains('page');
-        const disabled = !currentNode || !isPage || !(GM_getValue('profile:settings') || {})['prefer-edit-mode'];
+        const disabled = !currentNode || !isPage || !CRXB.settings.get('prefer-edit-mode');
         this.setDisabled(disabled);
     };
 
@@ -36,7 +36,7 @@ CRXB.util.getOpenPageActions = function() {
     CRX.ide.OpenPageEditAction.checkActive = function() {
         const currentNode = CRXB.util.getCurrent('node');
         const isPage = currentNode.ui.iconNode.classList.contains('page');
-        const disabled = !currentNode || !isPage || (GM_getValue('profile:settings') || {})['prefer-edit-mode'];
+        const disabled = !currentNode || !isPage || CRXB.settings.get('prefer-edit-mode');
         this.setDisabled(disabled);
     };
 

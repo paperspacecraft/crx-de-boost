@@ -1,7 +1,7 @@
 CRXB.tweaks.applyStyles = function(scope = ['splash', 'default']) {
 
-    const prefs = GM_getValue('profile:preferences') || {};
-    const colorScheme = CRXB.util.getCurrentColorScheme(prefs);
+    const prefs = CRXB.settings.get('instance-preferences');
+    const colorScheme = CRXB.util.getCurrentColorScheme();
 
     CRXB.styles.FONT_SIZE = (prefs.fontSize || 13) + 'px';
 
