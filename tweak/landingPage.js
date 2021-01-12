@@ -7,6 +7,7 @@ CRXB.tweaks.insertLandingPage = function() {
     homePanel.iconCls = '';
     homePanel.purgeListeners();
 
+
     //
     // Felix console
     //

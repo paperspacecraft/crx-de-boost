@@ -76,7 +76,7 @@ CRXB.tweaks.convertAddressBarToOmnibox = function() {
                 if (resultingValue.indexOf('?') > 0) {
                     resultingValue = resultingValue.split('?')[0];
                 }
-                //resultingValue = decodeURIComponent(resultingValue); TODO check if this deconding needed
+                //resultingValue = decodeURIComponent(resultingValue); TODO check if this decoding needed
             } else {
                 return {
                     value: resultingValue,
@@ -90,21 +90,19 @@ CRXB.tweaks.convertAddressBarToOmnibox = function() {
             if (/^\/editor\.html/i.test(resultingValue)) {
                 resultingValue = resultingValue.substring('/editor.html'.length);
             }
-            if (resultingValue.indexOf('.') > 0) {
-                resultingValue = resultingValue.split('.')[0];
-            } else if (resultingValue[resultingValue.length - 1] === '/') {
-                resultingValue = resultingValue.substring(0, resultingValue.length - 1);
-            }
             const autoPattern = (GM_getValue('profile:settings') || {})['omnibox-auto-pattern'];
             const autoReplacement = (GM_getValue('profile:settings') || {})['omnibox-auto-replacement'];
             if (autoPattern && autoReplacement) {
                 const rx =  new RegExp(autoPattern);
                 if (rx.test(resultingValue)) {
-                    return {
-                        value:  resultingValue.replace(rx, autoReplacement),
-                        type: 'node'
-                    };
+                    resultingValue = resultingValue.replace(rx, autoReplacement);
                 }
+            }
+            if (/\.\w+$/.test(resultingValue) && /^\/content/i.test(resultingValue)) {
+                resultingValue = resultingValue.split('.')[0];
+            }
+            if (resultingValue[resultingValue.length - 1] === '/') {
+                resultingValue = resultingValue.substring(0, resultingValue.length - 1);
             }
             return {
                 value:  resultingValue,
