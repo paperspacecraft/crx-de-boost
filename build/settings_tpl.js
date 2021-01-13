@@ -1,11 +1,12 @@
 class SettingsHolder {
 
-    static SETTINGS_KEY = 'profile:settings';
-    static INSTANCE_PREFERENCES_KEY = 'profile:preferences';
+    static SETTINGS = 'profile:settings';
+    static INSTANCE_PREFERENCES = 'profile:preferences';
 
     constructor() {
-        this.data = GM_getValue(SettingsHolder.SETTINGS_KEY) || {};
-        this.data['instance-preferences'] = GM_getValue(SettingsHolder.INSTANCE_PREFERENCES_KEY) || {};
+        this.data = {};
+        this.data[SettingsHolder.SETTINGS] = GM_getValue(SettingsHolder.SETTINGS) || {};
+        this.data[SettingsHolder.INSTANCE_PREFERENCES] = GM_getValue(SettingsHolder.INSTANCE_PREFERENCES) || {};
     }
 
     add(key, value) {
@@ -14,19 +15,20 @@ class SettingsHolder {
     };
 
     get(key) {
-        return this.data[key];
+        return this.data[key] || this.data[SettingsHolder.SETTINGS][key] || this.data[SettingsHolder.INSTANCE_PREFERENCES][key];
     };
 
-    update(settings) {
-        if (typeof settings !== 'object' || !settings) {
+    update(key, settings) {
+        if (!key || typeof settings !== 'object' || !settings) {
             return this;
         }
-        Object.keys(settings).forEach(k => this.data[k] = settings[k]);
+        Object.keys(settings).forEach(k => this.data[key][k] = settings[k]);
         return this;
     };
 
     save() {
-        GM_setValue(this.dataKey, this.data);
+        GM_setValue(SettingsHolder.SETTINGS, this.data[SettingsHolder.SETTINGS]);
+        GM_setValue(SettingsHolder.INSTANCE_PREFERENCES, this.data[SettingsHolder.INSTANCE_PREFERENCES]);
         return this;
     }
 

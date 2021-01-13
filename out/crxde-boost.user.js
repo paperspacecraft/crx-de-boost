@@ -2,7 +2,7 @@
 
 // @name         CRX/DE Boost
 // @namespace    http://aem.velwetowl.org/
-// @version      0.1.3
+// @version      0.1.4
 // @description  Makes CRX/DE passable for an AEM developer environment
 // @author       Stephen Velwetowl
 
@@ -961,10 +961,10 @@ CRXB.util.registerPreferencesDialog = function() {
                 }
             });
 
-            this.preferences = GM_getValue('profile:preferences') || {};
+            this.preferences = CRXB.settings.get(SettingsHolder.INSTANCE_PREFERENCES);
             this.colorControls = [];
             for (let colorSchemeName of COLOR_SCHEMES) {
-                const colorSchemeSrc = CRXB.util.getCurrentColorScheme(this.preferences, colorSchemeName);
+                const colorSchemeSrc = CRXB.util.getCurrentColorScheme(colorSchemeName);
                 this.colorControls.push(...Object.keys(colorSchemeSrc)
                     .filter(k => !/^_/.test(k))
                     .map(k => {return {
@@ -1055,7 +1055,7 @@ CRXB.util.registerPreferencesDialog = function() {
                             }
                             if (this.save()) {
                                 CRXB.tweaks.applyStyles();
-                                Ext.getCmp('environment').setText(CRXB.util.getEnvironmentLabel(this.preferences));
+                                Ext.getCmp('environment').setText(CRXB.util.getEnvironmentLabel());
                                 Ext.getCmp(CRX.ide.MAIN_ID).items.get(0).items.get(0).doLayout();
                             }
                             this.hide();
@@ -1094,7 +1094,7 @@ CRXB.util.registerPreferencesDialog = function() {
 
             const panel = this.items.get(0);
             for (let colorSchemeName of COLOR_SCHEMES) {
-                const colorSchemeSrc = CRXB.util.getCurrentColorScheme(this.preferences, colorSchemeName);
+                const colorSchemeSrc = CRXB.util.getCurrentColorScheme(colorSchemeName);
                 Object.keys(colorSchemeSrc).forEach(k => {
                     const swatch = panel.items.get(`color-control--${colorSchemeName}-${k}`);
                     swatch.setValue(colorSchemeSrc[k]);
@@ -1129,7 +1129,7 @@ CRXB.util.registerPreferencesDialog = function() {
                     this.preferences.customColors[schemeName] = this.preferences.customColors[schemeName] || {};
                     this.preferences.customColors[schemeName][colorKey] = item.getValue()
                 });
-            GM_setValue('profile:preferences', this.preferences);
+            CRXB.settings.save();
             return true;
         },
 
@@ -1145,7 +1145,7 @@ CRXB.util.registerPreferencesDialog = function() {
         },
 
         resetColors: function() {
-            const colorSchemeSrc = CRXB.util.getCurrentColorScheme(this.preferences, this.colorScheme.getValue(), true);
+            const colorSchemeSrc = CRXB.util.getCurrentColorScheme(this.colorScheme.getValue(), true);
             this.items.get(0).items
                 .filterBy(item => item.initialConfig.cls === 'color-swatch' && item.name.indexOf(this.colorScheme.getValue()) === 0)
                 .each(item => {
@@ -1779,7 +1779,7 @@ CRXB.util.registerSearchPanel = function() {
 
         constructor: function(config) {
 
-            this.QUERY_LIMIT = (GM_getValue('profile:settings') || {})['search-page-size'] || 30;
+            this.QUERY_LIMIT = CRXB.settings.get('search-page-size') || 30;
 
             this.store = new Ext.data.JsonStore({
                 autoDestroy: true,
@@ -2093,7 +2093,7 @@ CRXB.util.registerSettingsDialog = function() {
         title: 'Settings',
         modal: true,
         width: 420,
-        height: 340,
+        height: 380,
         layout: 'fit',
 
         constructor: function(config) {
@@ -2118,9 +2118,12 @@ CRXB.util.registerSettingsDialog = function() {
             this.openInEditMode = new Ext.form.Checkbox({
                 id: 'prefer-edit-mode',
                 fieldLabel: 'Open pages in<br>editor by dblclick',
-                minValue: 1
             });
 
+            this.allowDragging = new Ext.form.Checkbox({
+                id: 'allow-dragging',
+                fieldLabel: 'Allow dragging nodes',
+            });
 
             Ext.applyIf(config, {
                 items: {
@@ -2136,6 +2139,14 @@ CRXB.util.registerSettingsDialog = function() {
                         {
                             xtype: 'label',
                             cls: 'dialog-section',
+                            text: 'Repository tree settings',
+                            anchor: false,
+                        },
+                        this.openInEditMode,
+                        this.allowDragging,
+                        {
+                            xtype: 'label',
+                            cls: 'dialog-section',
                             text: 'Omnibox settings',
                             anchor: false,
                         },
@@ -2148,13 +2159,6 @@ CRXB.util.registerSettingsDialog = function() {
                             anchor: false,
                         },
                         this.searchPanelSize,
-                        {
-                            xtype: 'label',
-                            cls: 'dialog-section',
-                            text: 'Repository tree settings',
-                            anchor: false,
-                        },
-                        this.openInEditMode
                     ],
                 },
                 buttonAlign: 'center',
@@ -2178,12 +2182,11 @@ CRXB.util.registerSettingsDialog = function() {
         initComponent: function() {
             CRX.ide.SettingsDialog.superclass.initComponent.call(this);
             const panel = this.items.get(0);
-            const settings = GM_getValue('profile:settings') || {};
             panel.items.each(function(item) {
                 if (!item.setValue) {
                     return;
                 }
-                item.setValue(settings[item.id] || item.defaultValue);
+                item.setValue(CRXB.settings.get(item.id) || item.defaultValue);
                 item.originalValue = item.getValue();
             });
         },
@@ -2200,7 +2203,7 @@ CRXB.util.registerSettingsDialog = function() {
                 }
                 settings[item.id] = item.getValue();
             });
-            GM_setValue('profile:settings', settings);
+            CRXB.settings.update(SettingsHolder.SETTINGS, settings).save();
         },
 
         isDirty: function() {
@@ -2300,7 +2303,7 @@ CRXB.util.getDragActions = function() {
     }
 
     CRX.ide.AllowDragAction = new Ext.Action({
-        text: 'Unlock dragging',
+        text: 'Unlock for dragging',
         handler: () => {
             const node = CRXB.util.getCurrent('node');
             node.draggable = true;
@@ -2309,14 +2312,16 @@ CRXB.util.getDragActions = function() {
     });
     CRX.ide.AllowDragAction.checkActive = function() {
         const currentNode = CRXB.util.getCurrent('node');
+        const allowDragging = CRXB.settings.get('allow-dragging')
         const disabled = !currentNode
             || currentNode.draggable
+            || allowDragging
             || currentNode === Ext.getCmp(CRX.ide.TREE_ID).getRootNode();
         this.setDisabled(disabled);
     };
 
     CRX.ide.LockDragAction = new Ext.Action({
-        text: 'Lock dragging',
+        text: 'Lock for dragging',
         handler: (node) => {
             if (!node || node.getXType && (node.getXType() === 'menuitem')) {
                 node = CRXB.util.getCurrent('node');
@@ -2327,8 +2332,10 @@ CRXB.util.getDragActions = function() {
     });
     CRX.ide.LockDragAction.checkActive = function() {
         const currentNode = CRXB.util.getCurrent('node');
+        const allowDragging = CRXB.settings.get('allow-dragging');
         const disabled = !currentNode
             || !currentNode.draggable
+            || allowDragging
             || currentNode === Ext.getCmp(CRX.ide.TREE_ID).getRootNode();
         this.setDisabled(disabled);
     };
@@ -2407,8 +2414,8 @@ CRXB.util.stringify = function(value, filter) {
     return JSON.stringify(value, getCircularReplacer());
 };
 
-CRXB.util.getCurrentColorScheme = function(preferences, name, ignoreCustom) {
-    const prefs = preferences || GM_getValue('profile:preferences') || {};
+CRXB.util.getCurrentColorScheme = function(name, ignoreCustom) {
+    const prefs = CRXB.settings.get(SettingsHolder.INSTANCE_PREFERENCES);
     const colorSchemeName = name ||  (prefs.colorScheme || {})[window.location.host] || 'Blue';
     const colorScheme = new CrxColorScheme(CRXB.settings.get('color-schemes')[colorSchemeName]);
 
@@ -2420,10 +2427,12 @@ CRXB.util.getCurrentColorScheme = function(preferences, name, ignoreCustom) {
     return colorScheme;
 };
 
-CRXB.util.getEnvironmentLabel = function(preferences) {
-    const prefs = preferences || GM_getValue('profile:preferences') || {};
+CRXB.util.getEnvironmentLabel = function() {
+    const prefs = CRXB.settings.get(SettingsHolder.INSTANCE_PREFERENCES);
     return ((prefs.environment || {})[window.location.host] || window.location.host) + ' ›';
 };
+
+
 
 CRXB.util.getOpenPageActions = function() {
     if (CRX.ide.OpenPageViewAction) {
@@ -2444,7 +2453,7 @@ CRXB.util.getOpenPageActions = function() {
     CRX.ide.OpenPageViewAction.checkActive = function() {
         const currentNode = CRXB.util.getCurrent('node');
         const isPage = currentNode.ui.iconNode.classList.contains('page');
-        const disabled = !currentNode || !isPage || !(GM_getValue('profile:settings') || {})['prefer-edit-mode'];
+        const disabled = !currentNode || !isPage || !CRXB.settings.get('prefer-edit-mode');
         this.setDisabled(disabled);
     };
 
@@ -2463,7 +2472,7 @@ CRXB.util.getOpenPageActions = function() {
     CRX.ide.OpenPageEditAction.checkActive = function() {
         const currentNode = CRXB.util.getCurrent('node');
         const isPage = currentNode.ui.iconNode.classList.contains('page');
-        const disabled = !currentNode || !isPage || (GM_getValue('profile:settings') || {})['prefer-edit-mode'];
+        const disabled = !currentNode || !isPage || CRXB.settings.get('prefer-edit-mode');
         this.setDisabled(disabled);
     };
 
@@ -2870,20 +2879,47 @@ CRXB.util.getUploadClipboardAction = function() {
 
 
 
-CRXB.settings = new (function() {
-    this.data = {};
-    this.add = function(key, value) {
+class SettingsHolder {
+
+    static SETTINGS = 'profile:settings';
+    static INSTANCE_PREFERENCES = 'profile:preferences';
+
+    constructor() {
+        this.data = {};
+        this.data[SettingsHolder.SETTINGS] = GM_getValue(SettingsHolder.SETTINGS) || {};
+        this.data[SettingsHolder.INSTANCE_PREFERENCES] = GM_getValue(SettingsHolder.INSTANCE_PREFERENCES) || {};
+    }
+
+    add(key, value) {
         this.data[key] = value;
         return this;
     };
-    this.get = function(key) {
-        return this.data[key];
+
+    get(key) {
+        return this.data[key] || this.data[SettingsHolder.SETTINGS][key] || this.data[SettingsHolder.INSTANCE_PREFERENCES][key];
+    };
+
+    update(key, settings) {
+        if (!key || typeof settings !== 'object' || !settings) {
+            return this;
+        }
+        Object.keys(settings).forEach(k => this.data[key][k] = settings[k]);
+        return this;
+    };
+
+    save() {
+        GM_setValue(SettingsHolder.SETTINGS, this.data[SettingsHolder.SETTINGS]);
+        GM_setValue(SettingsHolder.INSTANCE_PREFERENCES, this.data[SettingsHolder.INSTANCE_PREFERENCES]);
+        return this;
     }
-})()
+
+}
+
+CRXB.settings = new SettingsHolder()
     .add('highlight-colors', ['None','Yellow','Peach','Orange','Pale Green','Green','Pink','Salmon','Lavender','Blue','Gray','Orchid','Violet','Tan',])
     .add('color-schemes', {'Blue': new CrxColorScheme({}), 'Ocean': new CrxColorScheme({"toolsBackground":"#1d9caf","toolsForeground":"#ebfffe","toolsHighlight":"#003f66","workspaceBackground":"#ffffff","workspaceShade":"#afe4e1","workspaceForeground":"#000000"}), 'Green': new CrxColorScheme({"toolsBackground":"#6dbb5d","toolsForeground":"#ffffff","toolsHighlight":"#386b3a","workspaceBackground":"#f5fff7","workspaceShade":"#d0ecca","workspaceForeground":"#000000"}), 'Lime': new CrxColorScheme({"toolsBackground":"#88b030","toolsForeground":"#faffe5","toolsHighlight":"#426001","workspaceBackground":"#ffffff","workspaceShade":"#ddeea0","workspaceForeground":"#000000"}), 'Peach': new CrxColorScheme({"toolsBackground":"#dc9450","toolsForeground":"#ffffff","toolsHighlight":"#813e04","workspaceBackground":"#fff9eb","workspaceShade":"#ffdec2","workspaceForeground":"#000000"}), 'Mango': new CrxColorScheme({"toolsBackground":"#deb429","toolsForeground":"#ffffff","toolsHighlight":"#744d17","workspaceBackground":"#fff7e5","workspaceShade":"#f5e5a0","workspaceForeground":"#000000"}), 'Pink': new CrxColorScheme({"toolsBackground":"#db7b7b","toolsForeground":"#ffffff","toolsHighlight":"#7c0e0e","workspaceBackground":"#ffffff","workspaceShade":"#fad3d3","workspaceForeground":"#000000"}), 'Fuchsia': new CrxColorScheme({"toolsBackground":"#b8569b","toolsForeground":"#ffffff","toolsHighlight":"#000074","workspaceBackground":"#ffffff","workspaceShade":"#d6c6f2","workspaceForeground":"#000000"})})
     .add('favicon', 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 557 602"><path fill="%23111" d="M354 117c-13,-27 -61,-6 -74,27 -13,33 5,63 42,82 37,19 89,11 120,-42 27,-47 22,-164 -116,-183 0,0 0,0 -1,0 -180,-8 -268,124 -289,191 -6,20 -10,43 -9,68l-1 0c-15,0 -26,12 -26,26l0 240c0,15 12,26 26,26l64 0c15,0 26,-12 26,-26l0 -19c0,-15 -12,-26 -26,-26l-5 0c-15,0 -26,-12 -26,-26l0 -84c17,33 38,60 60,84 15,16 33,42 46,50l0 72c0,15 12,26 26,26l64 0c15,0 26,-12 26,-26l0 -19c0,-15 -12,-26 -26,-26l-5 0c-14,0 -26,-11 -26,-25l91 0 37 0 0 71c0,15 12,26 26,26l64 0c15,0 26,-12 26,-26l0 -19c0,-15 -12,-26 -26,-26l-5 0c-14,0 -26,-11 -26,-25l79 0c7,0 14,-5 15,-10 1,-3 0,-5 -2,-7l-33 -27 59 25c17,7 40,-20 27,-40 -12,-18 -28,-36 -41,-53 -1,-1 -1,-2 -1,-3 -4,-33 -32,-58 -66,-58 -1,0 -1,0 -2,0 -3,0 -5,-1 -6,-3 -15,-24 -56,-53 -90,-57 -22,-2 -53,11 -69,52 -1,3 -5,5 -8,4 -52,-10 -72,-109 -51,-166 14,-39 68,-83 106,-84 30,0 44,14 57,36 10,17 8,46 -14,53 -19,6 -40,-8 -35,-22 3,-10 30,-10 21,-28zm89 260c14,0 26,12 26,26 0,14 -12,26 -26,26 -14,0 -26,-12 -26,-26 0,-14 12,-26 26,-26z"/></svg>')
-    .add('version', '0.1.3');
+    .add('version', '0.1.4');
 
 CRXB.styles = new (function() {
     this._src = {};
@@ -3833,8 +3869,8 @@ CRXB.tweaks.convertAddressBarToOmnibox = function() {
             if (/^\/editor\.html/i.test(resultingValue)) {
                 resultingValue = resultingValue.substring('/editor.html'.length);
             }
-            const autoPattern = (GM_getValue('profile:settings') || {})['omnibox-auto-pattern'];
-            const autoReplacement = (GM_getValue('profile:settings') || {})['omnibox-auto-replacement'];
+            const autoPattern = CRXB.settings.get('omnibox-auto-pattern');
+            const autoReplacement = CRXB.settings.get('omnibox-auto-replacement');
             if (autoPattern && autoReplacement) {
                 const rx =  new RegExp(autoPattern);
                 if (rx.test(resultingValue)) {
@@ -3940,7 +3976,7 @@ CRXB.tweaks.openPageInEditMode = function() {
     Ext.override(CRX.ide.PageEditor, {
         open: function() {
             const node = CRXB.util.getCurrent().node;
-            const openInEditMode = (GM_getValue('profile:settings') || {})['prefer-edit-mode'];
+            const openInEditMode = CRXB.settings.get('prefer-edit-mode');
             const [openStraight, openEdit] = CRXB.util.getOpenPageActions();
 
             if (openInEditMode) {
@@ -4230,15 +4266,22 @@ CRXB.tweaks.modifyRepositoryTree = function() {
 
             (child.attributes || {}).cls = classes.join(' ');
 
-            child.draggable = false;
+            child.draggable = !!CRXB.settings.get('allow-dragging');
+        },
+
+        parentCreateNode: CRX.ide.RepositoryTree.TreeLoader.prototype.createNode,
+        createNode: function(attr) {
+            const node = this.parentCreateNode(attr);
+            node.draggable = !!CRXB.settings.get('allow-dragging');
+            return node;
         }
     });
 };
 
 CRXB.tweaks.applyStyles = function(scope = ['splash', 'default']) {
 
-    const prefs = GM_getValue('profile:preferences') || {};
-    const colorScheme = CRXB.util.getCurrentColorScheme(prefs);
+    const prefs = CRXB.settings.get(SettingsHolder.INSTANCE_PREFERENCES);
+    const colorScheme = CRXB.util.getCurrentColorScheme();
 
     CRXB.styles.FONT_SIZE = (prefs.fontSize || 13) + 'px';
 

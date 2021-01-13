@@ -117,7 +117,7 @@ CRXB.util.registerSettingsDialog = function() {
                 }
                 settings[item.id] = item.getValue();
             });
-            CRXB.settings.update(settings).save();
+            CRXB.settings.update(SettingsHolder.SETTINGS, settings).save();
         },
 
         isDirty: function() {

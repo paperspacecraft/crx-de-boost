@@ -36,7 +36,7 @@ CRXB.util.stringify = function(value, filter) {
 };
 
 CRXB.util.getCurrentColorScheme = function(name, ignoreCustom) {
-    const prefs = CRXB.settings.get('instance-preferences');
+    const prefs = CRXB.settings.get(SettingsHolder.INSTANCE_PREFERENCES);
     const colorSchemeName = name ||  (prefs.colorScheme || {})[window.location.host] || 'Blue';
     const colorScheme = new CrxColorScheme(CRXB.settings.get('color-schemes')[colorSchemeName]);
 
@@ -49,6 +49,7 @@ CRXB.util.getCurrentColorScheme = function(name, ignoreCustom) {
 };
 
 CRXB.util.getEnvironmentLabel = function() {
-    const prefs = CRXB.settings.get('instance-preferences');
+    const prefs = CRXB.settings.get(SettingsHolder.INSTANCE_PREFERENCES);
     return ((prefs.environment || {})[window.location.host] || window.location.host) + ' ›';
 };
+

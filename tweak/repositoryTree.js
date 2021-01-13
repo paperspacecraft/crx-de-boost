@@ -113,7 +113,14 @@ CRXB.tweaks.modifyRepositoryTree = function() {
 
             (child.attributes || {}).cls = classes.join(' ');
 
-            child.draggable = false;
+            child.draggable = !!CRXB.settings.get('allow-dragging');
+        },
+
+        parentCreateNode: CRX.ide.RepositoryTree.TreeLoader.prototype.createNode,
+        createNode: function(attr) {
+            const node = this.parentCreateNode(attr);
+            node.draggable = !!CRXB.settings.get('allow-dragging');
+            return node;
         }
     });
 };

@@ -4,7 +4,7 @@ CRXB.util.getDragActions = function() {
     }
 
     CRX.ide.AllowDragAction = new Ext.Action({
-        text: 'Unlock dragging',
+        text: 'Unlock for dragging',
         handler: () => {
             const node = CRXB.util.getCurrent('node');
             node.draggable = true;
@@ -13,14 +13,16 @@ CRXB.util.getDragActions = function() {
     });
     CRX.ide.AllowDragAction.checkActive = function() {
         const currentNode = CRXB.util.getCurrent('node');
+        const allowDragging = CRXB.settings.get('allow-dragging')
         const disabled = !currentNode
             || currentNode.draggable
+            || allowDragging
             || currentNode === Ext.getCmp(CRX.ide.TREE_ID).getRootNode();
         this.setDisabled(disabled);
     };
 
     CRX.ide.LockDragAction = new Ext.Action({
-        text: 'Lock dragging',
+        text: 'Lock for dragging',
         handler: (node) => {
             if (!node || node.getXType && (node.getXType() === 'menuitem')) {
                 node = CRXB.util.getCurrent('node');
@@ -31,8 +33,10 @@ CRXB.util.getDragActions = function() {
     });
     CRX.ide.LockDragAction.checkActive = function() {
         const currentNode = CRXB.util.getCurrent('node');
+        const allowDragging = CRXB.settings.get('allow-dragging');
         const disabled = !currentNode
             || !currentNode.draggable
+            || allowDragging
             || currentNode === Ext.getCmp(CRX.ide.TREE_ID).getRootNode();
         this.setDisabled(disabled);
     };

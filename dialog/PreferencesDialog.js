@@ -47,7 +47,7 @@ CRXB.util.registerPreferencesDialog = function() {
                 }
             });
 
-            this.preferences = CRXB.settings.get('instance-preferences');
+            this.preferences = CRXB.settings.get(SettingsHolder.INSTANCE_PREFERENCES);
             this.colorControls = [];
             for (let colorSchemeName of COLOR_SCHEMES) {
                 const colorSchemeSrc = CRXB.util.getCurrentColorScheme(colorSchemeName);
