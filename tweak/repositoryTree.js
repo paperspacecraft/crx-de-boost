@@ -1,5 +1,7 @@
 CRXB.tweaks.modifyRepositoryTree = function() {
+
     // Define highlight colors
+
     const highlightColors = CRXB.settings.get('highlight-colors');
 
     // Tree sorting, UX and menu tweaks
