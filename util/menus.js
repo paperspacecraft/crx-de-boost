@@ -31,3 +31,16 @@ CRXB.util.arrangeMenu = function(menu, order, exclude) {
         }
     }
 };
+
+CRXB.util.modifyMenuItem = function(menu, item, fn) {
+    const itemArray =  Array.isArray(item) ? item : [item];
+    const foundItems = [];
+    for (let i of itemArray) {
+        if (typeof i === 'string') {
+            foundItems.push(...menu.findBy((mnu) => mnu.text === i || mnu.id === i || (mnu.baseAction && mnu.baseAction.text === i)));
+        } else if (typeof i === 'object') {
+            foundItems.push(...menu.findBy((mnu) => mnu === i || mnu.baseAction === i));
+        }
+    }
+    foundItems.forEach(foundItem => fn(foundItem));
+};

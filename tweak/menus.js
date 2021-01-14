@@ -99,17 +99,15 @@ CRXB.tweaks.modifyMenus = function() {
     ]);
 
     // Assign button icons
-    topToolbar.items.get(0).text = 'Refresh';
-    topToolbar.items.get(1).iconCls = 'action-save';
-    topToolbar.items.get(3).iconCls = 'action-add';
-    topToolbar.items.get(3).text = 'Create';
-    topToolbar.items.get(4).iconCls = 'action-edit';
-    topToolbar.items.get(6).iconCls = 'action-copy';
-    topToolbar.items.get(7).iconCls = 'action-paste';
-    topToolbar.items.get(8).iconCls = 'action-move';
-    topToolbar.items.get(9).iconCls = 'action-delete';
-    topToolbar.items.get(14).iconCls = 'action-tools';
-
+    CRXB.util.modifyMenuItem(topToolbar, CRX.ide.RefreshAction, item => item.text = 'Refresh');
+    CRXB.util.modifyMenuItem(topToolbar, 'Save All', item => item.iconCls = 'action-save');
+    CRXB.util.modifyMenuItem(topToolbar, 'Create ...', item => {item.iconCls = 'action-add'; item.text = 'Create';});
+    CRXB.util.modifyMenuItem(topToolbar, CRX.ide.RenameNodeAction, item => item.iconCls = 'action-edit');
+    CRXB.util.modifyMenuItem(topToolbar, CRX.ide.CopyNodeAction, item => item.iconCls = 'action-copy');
+    CRXB.util.modifyMenuItem(topToolbar, CRX.ide.PasteNodeAction, item => item.iconCls = 'action-paste');
+    CRXB.util.modifyMenuItem(topToolbar, CRX.ide.MoveNodeAction, item => item.iconCls = 'action-move');
+    CRXB.util.modifyMenuItem(topToolbar, CRX.ide.DeleteNodeAction, item => item.iconCls = 'action-delete');
+    CRXB.util.modifyMenuItem(topToolbar, 'Tools', item => item.iconCls = 'action-tools');
 
     //
     // Repository tree context menu
@@ -143,8 +141,9 @@ CRXB.tweaks.modifyMenus = function() {
     treeContextMenu.cls = 'x-menu-detached hide-disabled';
 
     // Assign button icons
-    treeContextMenu.items.get(3).iconCls = 'action-edit';
-    treeContextMenu.items.get(10).iconCls = 'action-move';
+    CRXB.util.modifyMenuItem(treeContextMenu, CRX.ide.RenameNodeAction, item => item.iconCls = 'action-edit');
+    CRXB.util.modifyMenuItem(treeContextMenu, CRX.ide.MoveNodeAction, item => item.iconCls = 'action-move');
+    CRXB.util.modifyMenuItem(treeContextMenu, CRXB.util.getDragActions(), item => item.iconCls = 'action-drag');
 
     //
     // Properties context menu
@@ -157,8 +156,9 @@ CRXB.tweaks.modifyMenus = function() {
         CRX.ide.EditMixinAction,
         CRX.ide.DeletePropertyAction
     ]);
-    propertiesContextMenu.items.get(4).iconCls = 'action-mixin';
     propertiesContextMenu.cls = 'x-menu-detached hide-disabled';
+
+    CRXB.util.modifyMenuItem(propertiesContextMenu, CRX.ide.EditMixinAction, item => item.iconCls = 'action-mixin');
 
     //
     // Tools menu

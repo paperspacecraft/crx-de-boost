@@ -21,7 +21,7 @@ CRXB.tweaks.modifyPropertyPanel = function() {
                     CRX.ide.DeletePropertyAction,
                 ]
             });
-            this.topToolbar.items.get(6).iconCls = 'action-mixin';
+            CRXB.util.modifyMenuItem(this.topToolbar, CRX.ide.EditMixinAction, item => item.iconCls = 'action-mixin');
 
             // Implement toolbar/menu buttons dynamic enable/disable
             this.getSelectionModel().addListener('selectionchange', () => {

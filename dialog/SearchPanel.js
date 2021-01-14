@@ -93,8 +93,8 @@ CRXB.util.registerSearchPanel = function() {
                 CRXB.util.setLocation(selectionModel.getSelected().get('path'), {ensureVisible: false});
             });
 
-            this.resultsView.contextMenu.items.get(0).iconCls = 'action-copy';
-            this.resultsView.contextMenu.items.get(1).iconCls = 'action-move';
+            CRXB.util.modifyMenuItem(this.resultsView.contextMenu, CRX.ide.CopyNodeAction, item => item.iconCls = 'action-copy');
+            CRXB.util.modifyMenuItem(this.resultsView.contextMenu, CRX.ide.MoveNodeAction, item => item.iconCls = 'action-move');
 
             this.mask =  new Ext.LoadMask(Ext.getBody());
 
