@@ -8,10 +8,10 @@ class CrxPackager {
 
         CrxPackager.apply(this.config, {
 
-           success: () => {},
-           failure: () => {},
-           status: () => {},
-           acHandling: CRXB.settings.get('default-ac-handling')
+            success: () => {},
+            failure: () => {},
+            status: () => {},
+            acHandling: CRXB.settings.get('default-ac-handling')
 
         }, true);
 
@@ -34,9 +34,13 @@ class CrxPackager {
     async download(path) {
 
         path = decodeURIComponent(path);
+        let effectivePackageName = (this.config.packageName || `${CRXB.util.getEnvironmentLabel()}-${path}`).replace(/[\/:.,]+/gi, '-');
+        if (!this.config.packageName) {
+            effectivePackageName += '-' + new Date().getTime();
+        }
         const argument = {
             jcrPath: path,
-            packageName: (window.location.hostname + '-' + path).replace(/[\/:.,]+/gi, '-') + '-' + new Date().getTime(),
+            packageName: effectivePackageName,
             stage: 'Creating package',
             completion: 0
         };
@@ -50,7 +54,7 @@ class CrxPackager {
             const createUrl = CrxPackager.getEncodedUrl(this.config.endpoints.create, {
                 cmd: 'create',
                 packageName: argument.packageName,
-                groupName: 'transient'
+                groupName: this.config.groupName || 'transient'
             });
             const createResponse = await fetch(createUrl, {method: 'post'});
             const createResponseJson = createResponse.ok && CrxPackager.isJson(createResponse)

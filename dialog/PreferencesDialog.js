@@ -141,7 +141,7 @@ CRXB.util.registerPreferencesDialog = function() {
                             }
                             if (this.save()) {
                                 CRXB.tweaks.applyStyles();
-                                Ext.getCmp('environment').setText(CRXB.util.getEnvironmentLabel());
+                                Ext.getCmp('environment').setText(CRXB.util.getEnvironmentLabel() + ' ›');
                                 Ext.getCmp(CRX.ide.MAIN_ID).items.get(0).items.get(0).doLayout();
                             }
                             this.hide();

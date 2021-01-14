@@ -50,6 +50,6 @@ CRXB.util.getCurrentColorScheme = function(name, ignoreCustom) {
 
 CRXB.util.getEnvironmentLabel = function() {
     const prefs = CRXB.settings.get(SettingsHolder.INSTANCE_PREFERENCES);
-    return ((prefs.environment || {})[window.location.host] || window.location.host) + ' ›';
+    return (prefs.environment || {})[window.location.host] || window.location.host;
 };
 

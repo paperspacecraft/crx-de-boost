@@ -200,10 +200,10 @@ class CrxPackager {
 
         CrxPackager.apply(this.config, {
 
-           success: () => {},
-           failure: () => {},
-           status: () => {},
-           acHandling: CRXB.settings.get('default-ac-handling')
+            success: () => {},
+            failure: () => {},
+            status: () => {},
+            acHandling: CRXB.settings.get('default-ac-handling')
 
         }, true);
 
@@ -223,9 +223,13 @@ class CrxPackager {
     async download(path) {
 
         path = decodeURIComponent(path);
+        let effectivePackageName = (this.config.packageName || `${CRXB.util.getEnvironmentLabel()}-${path}`).replace(/[\/:.,]+/gi, '-');
+        if (!this.config.packageName) {
+            effectivePackageName += '-' + new Date().getTime();
+        }
         const argument = {
             jcrPath: path,
-            packageName: (window.location.hostname + '-' + path).replace(/[\/:.,]+/gi, '-') + '-' + new Date().getTime(),
+            packageName: effectivePackageName,
             stage: 'Creating package',
             completion: 0
         };
@@ -238,7 +242,7 @@ class CrxPackager {
             const createUrl = CrxPackager.getEncodedUrl(this.config.endpoints.create, {
                 cmd: 'create',
                 packageName: argument.packageName,
-                groupName: 'transient'
+                groupName: this.config.groupName || 'transient'
             });
             const createResponse = await fetch(createUrl, {method: 'post'});
             const createResponseJson = createResponse.ok && CrxPackager.isJson(createResponse)
@@ -1065,7 +1069,7 @@ CRXB.util.registerPreferencesDialog = function() {
                             }
                             if (this.save()) {
                                 CRXB.tweaks.applyStyles();
-                                Ext.getCmp('environment').setText(CRXB.util.getEnvironmentLabel());
+                                Ext.getCmp('environment').setText(CRXB.util.getEnvironmentLabel() + ' ›');
                                 Ext.getCmp(CRX.ide.MAIN_ID).items.get(0).items.get(0).doLayout();
                             }
                             this.hide();
@@ -2462,7 +2466,7 @@ CRXB.util.getCurrentColorScheme = function(name, ignoreCustom) {
 
 CRXB.util.getEnvironmentLabel = function() {
     const prefs = CRXB.settings.get(SettingsHolder.INSTANCE_PREFERENCES);
-    return ((prefs.environment || {})[window.location.host] || window.location.host) + ' ›';
+    return (prefs.environment || {})[window.location.host] || window.location.host;
 };
 
 
@@ -3365,7 +3369,7 @@ CRXB.tweaks.addEnvironmentLabel = function () {
 
     const envLabel = new Ext.form.Label({
         id: 'environment',
-        text: CRXB.util.getEnvironmentLabel()
+        text: CRXB.util.getEnvironmentLabel() + ' ›'
     });
 
     addressPanel.items.unshift(envLabel);

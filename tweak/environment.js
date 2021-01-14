@@ -5,7 +5,7 @@ CRXB.tweaks.addEnvironmentLabel = function () {
 
     const envLabel = new Ext.form.Label({
         id: 'environment',
-        text: CRXB.util.getEnvironmentLabel()
+        text: CRXB.util.getEnvironmentLabel() + ' ›'
     });
 
     addressPanel.items.unshift(envLabel);
