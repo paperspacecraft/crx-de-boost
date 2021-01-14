@@ -56,6 +56,17 @@ CRXB.util.registerPackageUploadDialog = function() {
                         handler: () => this.close()
                     }
                 ],
+                keys: [
+                    {
+                        key: [10, 13],
+                        alt: false,
+                        ctrl: false,
+                        shift: false,
+                        fn: () => this.doUpload(),
+                        stopEvent: true
+                    }
+                ]
+
             });
             CRX.ide.PackageUploadDialog.superclass.constructor.call(this, config);
         },

@@ -111,6 +111,18 @@ CRXB.util.registerSettingsDialog = function() {
                         text: 'Cancel',
                         handler: () => this.close()
                     }
+                ],
+                keys: [
+                    {
+                        key: [10, 13],
+                        alt: false,
+                        ctrl: false,
+                        shift: false,
+                        fn: () => {
+                            document.location.reload();
+                        },
+                        stopEvent: true
+                    }
                 ]
             });
             CRX.ide.SettingsDialog.superclass.constructor.call(this, config);

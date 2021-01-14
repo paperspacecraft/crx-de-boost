@@ -72,6 +72,20 @@ CRXB.util.registerPropertyDialog = function() {
                         text: 'Cancel',
                         handler: () => this.hide()
                     }
+                ],
+                keys: [
+                    {
+                        key: [10, 13],
+                        ctrl: false,
+                        alt: false,
+                        shift: false,
+                        fn: async () => {
+                            if (await this.save()) {
+                                this.hide();
+                            }
+                        },
+                        stopEvent: true
+                    },
                 ]
             });
 

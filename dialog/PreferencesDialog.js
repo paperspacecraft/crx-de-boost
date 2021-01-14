@@ -47,6 +47,21 @@ CRXB.util.registerPreferencesDialog = function() {
                 }
             });
 
+            this.okButton = new Ext.Button({
+                text: 'OK',
+                handler: () => {
+                    if (!this.isValid()) {
+                        return;
+                    }
+                    if (this.save()) {
+                        CRXB.tweaks.applyStyles();
+                        Ext.getCmp('environment').setText(CRXB.util.getEnvironmentLabel() + ' ›');
+                        Ext.getCmp(CRX.ide.MAIN_ID).items.get(0).items.get(0).doLayout();
+                    }
+                    this.hide();
+                }
+            });
+
             this.preferences = CRXB.settings.get(SettingsHolder.INSTANCE_PREFERENCES);
             this.colorControls = [];
             for (let colorSchemeName of COLOR_SCHEMES) {
@@ -74,7 +89,7 @@ CRXB.util.registerPreferencesDialog = function() {
                     html: `This will be applied to <b>${window.location.host}</b>`,
                     style: labelStyle,
                     anchor: false,
-                };
+            };
 
 
             Ext.applyIf(config, {
@@ -133,25 +148,23 @@ CRXB.util.registerPreferencesDialog = function() {
                 },
                 buttonAlign: 'center',
                 buttons: [
-                    {
-                        text: 'OK',
-                        handler: () => {
-                            if (!this.isValid()) {
-                                return;
-                            }
-                            if (this.save()) {
-                                CRXB.tweaks.applyStyles();
-                                Ext.getCmp('environment').setText(CRXB.util.getEnvironmentLabel() + ' ›');
-                                Ext.getCmp(CRX.ide.MAIN_ID).items.get(0).items.get(0).doLayout();
-                            }
-                            this.hide();
-                        }
-                    },
+                    this.okButton,
                     {
                         text: 'Cancel',
                         handler: () => this.hide()
                     }
+                ],
+                keys: [
+                    {
+                        key: [10, 13],
+                        alt: false,
+                        ctrl: false,
+                        shift: false,
+                        fn: () => this.okButton.el.dom.click(),
+                        stopEvent: true
+                    }
                 ]
+
             });
             CRX.ide.CustomPreferencesDialog.superclass.constructor.call(this, config);
         },
