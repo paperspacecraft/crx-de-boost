@@ -46,7 +46,7 @@ CRXB.tweaks.modifyMenus = function() {
             },
             menu: new Ext.menu.Menu({
                 items: [
-                    CRXB.util.getReplicationDialogAction(),
+                    CRXB.util.getReplicationDialogActions(),
                     CRXB.util.getAccessControlDialogAction(),
                     '-',
                     CRX.ide.OverlayNodeAction,
@@ -128,7 +128,8 @@ CRXB.tweaks.modifyMenus = function() {
         CRX.ide.OverlayNodeAction,
         CRXB.util.getAccessControlDialogAction(),
         '-',
-        CRXB.util.getReplicationDialogAction(),
+        CRXB.util.getReplicationDialogActions(),
+        '-',
         CRXB.util.getDownloadAction(),
         '-',
         CRXB.util.getSortAction(),

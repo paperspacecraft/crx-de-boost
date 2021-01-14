@@ -52,18 +52,63 @@ CRXB.util.registerReplicationDialog = function() {
     Ext.reg('replicationdialog', CRX.ide.ReplicationDialog);
 };
 
-CRXB.util.getReplicationDialogAction = function() {
+CRXB.util.getReplicationDialogActions = function() {
     if (CRX.ide.ReplicationDialogAction) {
-        return CRX.ide.ReplicationDialogAction;
+        return [CRX.ide.ReplicationDialogAction, CRX.ide.ReplicateAction];
     }
 
     CRXB.util.registerReplicationDialog();
 
     CRX.ide.ReplicationDialogAction = new Ext.Action({
-        text: 'Replicate ...',
+        text: 'Replication ...',
         iconCls: 'action-replicate',
         dialogId: 'replicationdialog',
-        handler:CRX.Util.openActionDialog
+        handler: CRX.Util.openActionDialog
     });
-    return CRX.ide.ReplicationDialogAction;
+
+    CRX.ide.ReplicateAction = new Ext.Action({
+        text: 'Replicate now',
+        handler: async function() {
+            const path = CRXB.util.getCurrent('path');
+            if (!path) {
+                return;
+            }
+            const formData = new FormData();
+            formData.append('path', path);
+            formData.append('action', 'replicate');
+            formData.append('_charset_', 'utf-8');
+
+            const handleException = function(e) {
+                Ext.Msg.show({
+                    title: 'Replication',
+                    msg: `Could not replicate <em>${path}</em>: ${e.message || e}`,
+                    width: 420,
+                    buttons: Ext.Msg.OK,
+                    iconCls: Ext.Msg.ERROR
+                });
+            };
+
+            try {
+                const response = await fetch('replication.jsp', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (response.ok) {
+                    Ext.Msg.show({
+                        title: 'Replication',
+                        msg: `Successfully replicated <em>${path}</em>`,
+                        width: 420,
+                        buttons: Ext.Msg.OK,
+                        icon: Ext.Msg.INFO
+                    });
+                } else {
+                    handleException(response.statusText);
+                }
+            } catch (e) {
+                handleException(e);
+            }
+        }
+    });
+
+    return [CRX.ide.ReplicationDialogAction, CRX.ide.ReplicateAction];
 };

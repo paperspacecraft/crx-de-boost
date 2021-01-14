@@ -65,7 +65,8 @@ CRXB.util.registerSearchPanel = function() {
                         CRX.ide.OverlayNodeAction,
                         CRXB.util.getAccessControlDialogAction(),
                         '-',
-                        CRXB.util.getReplicationDialogAction(),
+                        CRXB.util.getReplicationDialogActions(),
+                        '-',
                         CRXB.util.getDownloadAction(),
                     ]
                 }),

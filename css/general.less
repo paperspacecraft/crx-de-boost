@@ -135,10 +135,6 @@ ul.x-tab-strip-top {
 
 /* Properties toolbar */
 
-//#custom-properties-toolbar {
-//    padding-bottom: 4px;
-//}
-
 #tools-wrapper .x-panel-bwrap,
 #tools-wrapper .x-panel-body,
 #tools-wrapper .x-panel-tbar,
@@ -155,10 +151,6 @@ ul.x-tab-strip-top {
     background-color: @COLOR_WORKSPACE_SHADE;
     box-shadow: 0px -2px 0px 0px @COLOR_WORKSPACE_SHADE;
 }
-
-//#properties .x-btn-over td {
-//    background-color: @COLOR_TOOLS_BG;
-//}
 
 #properties .x-btn-text {
     font-size: 11px;
@@ -294,7 +286,8 @@ ul.x-tab-strip-top {
 }
 
 .x-menu-sep-li+.x-menu-sep-li,
-.hide-disabled .x-menu-list-item.x-item-disabled {
+.hide-disabled .x-menu-list-item.x-item-disabled,
+.hide-disabled .x-menu-sep-li+.x-item-disabled+.x-menu-sep-li {
     display: none;
 }
 
