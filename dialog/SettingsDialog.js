@@ -7,7 +7,7 @@ CRXB.util.registerSettingsDialog = function() {
         title: 'Settings',
         modal: true,
         width: 420,
-        height: 380,
+        height: 450,
         layout: 'fit',
 
         constructor: function(config) {
@@ -31,7 +31,7 @@ CRXB.util.registerSettingsDialog = function() {
 
             this.openInEditMode = new Ext.form.Checkbox({
                 id: 'prefer-edit-mode',
-                fieldLabel: 'Open pages in<br>editor by dblclick',
+                fieldLabel: 'Open pages in editmode',
             });
 
             this.allowDragging = new Ext.form.Checkbox({
@@ -39,25 +39,32 @@ CRXB.util.registerSettingsDialog = function() {
                 fieldLabel: 'Allow dragging nodes',
             });
 
+            this.defaultAcHandling = new Ext.form.ComboBox({
+                id: 'default-ac-handling',
+                fieldLabel: 'Access control handling',
+                store: CrxPackager.AC_HANDLING_OPTIONS,
+                triggerAction: 'all',
+            });
+
+            this.inMemPackageSize = new Ext.ux.SpinnerField({
+                id: 'in-mem-package-size',
+                fieldLabel: 'In-memory package size (Mb)',
+                allowBlank: true,
+                defaultValue: CrxPackager.MAX_BLOB_SIZE_MB,
+                minValue: 1
+            });
+
             Ext.applyIf(config, {
                 items: {
                     xtype: 'panel',
                     layout: 'form',
                     bodyStyle: 'padding: 20px 12px 0 12px',
-                    labelWidth: 100,
+                    labelWidth: 140,
                     defaults: {
                         msgTarget: 'side',
                         anchor: '98%',
                     },
                     items: [
-                        {
-                            xtype: 'label',
-                            cls: 'dialog-section',
-                            text: 'Repository tree settings',
-                            anchor: false,
-                        },
-                        this.openInEditMode,
-                        this.allowDragging,
                         {
                             xtype: 'label',
                             cls: 'dialog-section',
@@ -69,10 +76,26 @@ CRXB.util.registerSettingsDialog = function() {
                         {
                             xtype: 'label',
                             cls: 'dialog-section',
+                            text: 'Repository tree settings',
+                            anchor: false,
+                        },
+                        this.openInEditMode,
+                        this.allowDragging,
+                        {
+                            xtype: 'label',
+                            cls: 'dialog-section',
                             text: 'Search panel settings',
                             anchor: false,
                         },
                         this.searchPanelSize,
+                        {
+                            xtype: 'label',
+                            cls: 'dialog-section',
+                            text: 'Packager settings',
+                            anchor: false,
+                        },
+                        this.defaultAcHandling,
+                        this.inMemPackageSize,
                     ],
                 },
                 buttonAlign: 'center',

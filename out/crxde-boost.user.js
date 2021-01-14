@@ -192,15 +192,19 @@ class CrxPackageModifier {
 
 class CrxPackager {
 
-    static MAX_BLOB_SIZE = 20 * 1024 * 1024; 
+    static MAX_BLOB_SIZE_MB = 20; 
+    static AC_HANDLING_OPTIONS = ['-', 'ignore', 'overwrite', 'merge', 'merge_preserve', 'clear'];
 
     constructor(config) {
         this.config = config || {};
 
         CrxPackager.apply(this.config, {
+
            success: () => {},
            failure: () => {},
-           status: () => {}
+           status: () => {},
+           acHandling: CRXB.settings.get('default-ac-handling')
+
         }, true);
 
         this.config.endpoints = this.config.endpoints || {};
@@ -211,6 +215,8 @@ class CrxPackager {
             build: '/crx/packmgr/service/script.html',
             download: '/crx/packmgr/download.jsp'
         }, true);
+
+        this.config.maxBlobSize = (CRXB.settings.get('in-mem-package-size') || CrxPackager.MAX_BLOB_SIZE_MB) * 1024 * 1024;
     }
 
 
@@ -250,11 +256,15 @@ class CrxPackager {
             this.config.status(argument);
 
 
-            const setupUrl = CrxPackager.getEncodedUrl(this.config.endpoints.setup, {
+            const setupUrlParams = {
                 path: argument.packagePath,
                 packageName: argument.packageName,
                 filter: JSON.stringify([{root: argument.jcrPath, rules: []}])
-            });
+            };
+            if (this.config.acHandling && CrxPackager.AC_HANDLING_OPTIONS.indexOf(this.config.acHandling) >= 0) {
+                setupUrlParams['acHandling'] = this.config.acHandling;
+            }
+            const setupUrl = CrxPackager.getEncodedUrl(this.config.endpoints.setup, setupUrlParams);
             const setupResponse = await fetch(setupUrl, {method: 'post'});
             const setupResponseJson = setupResponse.ok
                 ? await setupResponse.json()
@@ -301,7 +311,7 @@ class CrxPackager {
 
             argument.stage = 'Ready for download';
             argument.completion = 1;
-            if (CrxPackager.MAX_BLOB_SIZE > 0 && packageSize > CrxPackager.MAX_BLOB_SIZE) {
+            if (this.config.maxBlobSize && packageSize > this.config.maxBlobSize) {
                 argument.extraSize = true;
             }
             argument.autoCleanUp = this.config.cleanUp && !argument.extraSize;
@@ -2093,7 +2103,7 @@ CRXB.util.registerSettingsDialog = function() {
         title: 'Settings',
         modal: true,
         width: 420,
-        height: 380,
+        height: 450,
         layout: 'fit',
 
         constructor: function(config) {
@@ -2117,7 +2127,7 @@ CRXB.util.registerSettingsDialog = function() {
 
             this.openInEditMode = new Ext.form.Checkbox({
                 id: 'prefer-edit-mode',
-                fieldLabel: 'Open pages in<br>editor by dblclick',
+                fieldLabel: 'Open pages in editmode',
             });
 
             this.allowDragging = new Ext.form.Checkbox({
@@ -2125,25 +2135,32 @@ CRXB.util.registerSettingsDialog = function() {
                 fieldLabel: 'Allow dragging nodes',
             });
 
+            this.defaultAcHandling = new Ext.form.ComboBox({
+                id: 'default-ac-handling',
+                fieldLabel: 'Access control handling',
+                store: CrxPackager.AC_HANDLING_OPTIONS,
+                triggerAction: 'all',
+            });
+
+            this.inMemPackageSize = new Ext.ux.SpinnerField({
+                id: 'in-mem-package-size',
+                fieldLabel: 'In-memory package size (Mb)',
+                allowBlank: true,
+                defaultValue: CrxPackager.MAX_BLOB_SIZE_MB,
+                minValue: 1
+            });
+
             Ext.applyIf(config, {
                 items: {
                     xtype: 'panel',
                     layout: 'form',
                     bodyStyle: 'padding: 20px 12px 0 12px',
-                    labelWidth: 100,
+                    labelWidth: 140,
                     defaults: {
                         msgTarget: 'side',
                         anchor: '98%',
                     },
                     items: [
-                        {
-                            xtype: 'label',
-                            cls: 'dialog-section',
-                            text: 'Repository tree settings',
-                            anchor: false,
-                        },
-                        this.openInEditMode,
-                        this.allowDragging,
                         {
                             xtype: 'label',
                             cls: 'dialog-section',
@@ -2155,10 +2172,26 @@ CRXB.util.registerSettingsDialog = function() {
                         {
                             xtype: 'label',
                             cls: 'dialog-section',
+                            text: 'Repository tree settings',
+                            anchor: false,
+                        },
+                        this.openInEditMode,
+                        this.allowDragging,
+                        {
+                            xtype: 'label',
+                            cls: 'dialog-section',
                             text: 'Search panel settings',
                             anchor: false,
                         },
                         this.searchPanelSize,
+                        {
+                            xtype: 'label',
+                            cls: 'dialog-section',
+                            text: 'Packager settings',
+                            anchor: false,
+                        },
+                        this.defaultAcHandling,
+                        this.inMemPackageSize,
                     ],
                 },
                 buttonAlign: 'center',

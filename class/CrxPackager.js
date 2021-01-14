@@ -1,14 +1,18 @@
 class CrxPackager {
 
-    static MAX_BLOB_SIZE = 20 * 1024 * 1024; // 20 MB limit for storing downloaded package in memory
+    static MAX_BLOB_SIZE_MB = 20; // limit for storing downloaded package in memory
+    static AC_HANDLING_OPTIONS = ['-', 'ignore', 'overwrite', 'merge', 'merge_preserve', 'clear'];
 
     constructor(config) {
         this.config = config || {};
 
         CrxPackager.apply(this.config, {
+
            success: () => {},
            failure: () => {},
-           status: () => {}
+           status: () => {},
+           acHandling: CRXB.settings.get('default-ac-handling')
+
         }, true);
 
         this.config.endpoints = this.config.endpoints || {};
@@ -19,6 +23,8 @@ class CrxPackager {
             build: '/crx/packmgr/service/script.html',
             download: '/crx/packmgr/download.jsp'
         }, true);
+
+        this.config.maxBlobSize = (CRXB.settings.get('in-mem-package-size') || CrxPackager.MAX_BLOB_SIZE_MB) * 1024 * 1024;
     }
 
     //
@@ -63,11 +69,15 @@ class CrxPackager {
 
             // Stage: setup
 
-            const setupUrl = CrxPackager.getEncodedUrl(this.config.endpoints.setup, {
+            const setupUrlParams = {
                 path: argument.packagePath,
                 packageName: argument.packageName,
                 filter: JSON.stringify([{root: argument.jcrPath, rules: []}])
-            });
+            };
+            if (this.config.acHandling && CrxPackager.AC_HANDLING_OPTIONS.indexOf(this.config.acHandling) >= 0) {
+                setupUrlParams['acHandling'] = this.config.acHandling;
+            }
+            const setupUrl = CrxPackager.getEncodedUrl(this.config.endpoints.setup, setupUrlParams);
             const setupResponse = await fetch(setupUrl, {method: 'post'});
             const setupResponseJson = setupResponse.ok
                 ? await setupResponse.json()
@@ -117,7 +127,7 @@ class CrxPackager {
 
             argument.stage = 'Ready for download';
             argument.completion = 1;
-            if (CrxPackager.MAX_BLOB_SIZE > 0 && packageSize > CrxPackager.MAX_BLOB_SIZE) {
+            if (this.config.maxBlobSize && packageSize > this.config.maxBlobSize) {
                 argument.extraSize = true;
             }
             argument.autoCleanUp = this.config.cleanUp && !argument.extraSize;
