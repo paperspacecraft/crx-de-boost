@@ -2,6 +2,7 @@ class CrxPackager {
 
     static MAX_BLOB_SIZE_MB = 20; // limit for storing downloaded package in memory
     static AC_HANDLING_OPTIONS = ['-', 'ignore', 'overwrite', 'merge', 'merge_preserve', 'clear'];
+    static DEFAULT_PACKAGE_GROUP = 'my_packages';
 
     constructor(config) {
         this.config = config || {};
@@ -32,12 +33,13 @@ class CrxPackager {
     //
 
     async download(path) {
+        path = path || this.config.path;
+        let effectivePackageName = this.config.packageName || CrxPackager.getPackageName(path) + '-' + new Date().getTime();
 
-        path = decodeURIComponent(path);
-        let effectivePackageName = (this.config.packageName || `${CRXB.util.getEnvironmentLabel()}-${path}`).replace(/[\/:.,]+/gi, '-');
-        if (!this.config.packageName) {
-            effectivePackageName += '-' + new Date().getTime();
+        if (!effectivePackageName || !path) {
+            return this.handleFailure('Package name or path not specified');
         }
+
         const argument = {
             jcrPath: path,
             packageName: effectivePackageName,
@@ -62,7 +64,7 @@ class CrxPackager {
                 : {};
             if (!createResponseJson.success) {
                 argument.httpStatus = createResponse.status;
-                argument.message = createResponseJson.msg || 'Could not create package';
+                argument.message = 'Could not create package' + (createResponseJson.msg ? ': ' + createResponseJson.msg : '');
                 return this.handleFailure(argument);
             }
 
@@ -333,6 +335,15 @@ class CrxPackager {
     static isJson(response) {
         const contentTypeHeader =  response.headers.get('content-type') || '';
         return contentTypeHeader.indexOf('application/json') === 0;
+    }
+
+    static getPackageName(path) {
+        const decodedPath = decodeURIComponent(path);
+        return CrxPackager.sanitizePackageName(`${CRXB.util.getEnvironmentLabel()}-${decodedPath}`);
+    }
+
+    static sanitizePackageName(value) {
+        return value.replace(/[\/:.,]+/g, '-');
     }
 
     static getEncodedUrl(url, params) {

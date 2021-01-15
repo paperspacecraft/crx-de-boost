@@ -67,7 +67,7 @@ CRXB.util.registerSearchPanel = function() {
                         '-',
                         CRXB.util.getReplicationDialogActions(),
                         '-',
-                        CRXB.util.getDownloadAction(),
+                        CRXB.util.getDownloadActions(),
                     ]
                 }),
                 listeners: {

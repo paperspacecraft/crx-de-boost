@@ -3,7 +3,6 @@ CRXB.util.registerPackageUploadDialog = function() {
         return;
     }
     CRX.ide.PackageUploadDialog = Ext.extend(Ext.Window, {
-        cls: 'package-upload',
         title: 'Upload Package',
         modal: true,
         width: 420,
@@ -131,7 +130,6 @@ CRXB.util.getUploadDialogAction = function() {
     CRXB.util.registerPackageUploadDialog();
     CRX.ide.UploadDialogAction = new Ext.Action({
         text: 'Install ...',
-        dialogId: 'packageuploaddialog',
         iconCls: 'action-upload',
         handler: () => {
             CRX.ide.PackageUploadDialog.getInstance().show();

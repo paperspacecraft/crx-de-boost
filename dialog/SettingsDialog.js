@@ -44,6 +44,10 @@ CRXB.util.registerSettingsDialog = function() {
                 fieldLabel: 'Access control handling',
                 store: CrxPackager.AC_HANDLING_OPTIONS,
                 triggerAction: 'all',
+                defaultValue: CrxPackager.AC_HANDLING_OPTIONS[0],
+                validator: function(value) {
+                    return CrxPackager.AC_HANDLING_OPTIONS.indexOf(value) >= 0
+                }
             });
 
             this.inMemPackageSize = new Ext.ux.SpinnerField({
@@ -183,7 +187,6 @@ CRXB.util.getSettingsDialogAction = function() {
     CRXB.util.registerSettingsDialog();
     CRX.ide.SettingsDialogAction = new Ext.Action({
         text: 'Settings ...',
-        dialogId: 'settingsdialog',
         iconCls: 'action-settings',
         handler: () => {
             CRX.ide.SettingsDialog.getInstance().show();

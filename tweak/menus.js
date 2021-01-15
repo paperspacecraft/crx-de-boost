@@ -28,7 +28,7 @@ CRXB.tweaks.modifyMenus = function() {
                        }
                     }),
                     '-',
-                    CRXB.util.getDownloadAction(),
+                    CRXB.util.getDownloadActions(),
                     '-',
                     CRXB.util.getUploadDialogAction(),
                     CRXB.util.getUploadClipboardAction()
@@ -130,7 +130,7 @@ CRXB.tweaks.modifyMenus = function() {
         '-',
         CRXB.util.getReplicationDialogActions(),
         '-',
-        CRXB.util.getDownloadAction(),
+        CRXB.util.getDownloadActions(),
         '-',
         CRXB.util.getSortAction(),
         CRXB.util.getUnsortAction(),
