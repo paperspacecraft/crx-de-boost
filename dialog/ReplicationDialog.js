@@ -60,7 +60,7 @@ CRXB.util.getReplicationDialogActions = function() {
     CRXB.util.registerReplicationDialog();
 
     CRX.ide.ReplicationDialogAction = new Ext.Action({
-        text: 'Replication ...',
+        text: 'Replicate ...',
         iconCls: 'action-replicate',
         dialogId: 'replicationdialog',
         handler: CRX.Util.openActionDialog

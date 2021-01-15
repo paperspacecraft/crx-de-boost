@@ -160,7 +160,7 @@ CRXB.util.registerPreferencesDialog = function() {
                         alt: false,
                         ctrl: false,
                         shift: false,
-                        fn: () => this.okButton.el.dom.click(),
+                        fn: () => this.okButton.el.dom.click,
                         stopEvent: true
                     }
                 ]
@@ -251,7 +251,24 @@ CRXB.util.registerPreferencesDialog = function() {
                     const colorKey = item.name.split('-')[1];
                     item.setValue(colorSchemeSrc[colorKey]);
                 });
+            this.processResetButtonState();
+        },
 
+        processResetButtonState: function() {
+            const colorSchemeSrc = CRXB.util.getCurrentColorScheme(this.colorScheme.getValue(), true);
+            const currentSwatches =this.items.get(0).items
+                .filterBy(item => item.initialConfig.cls === 'color-swatch'
+                    && item.name.indexOf(this.colorScheme.getValue()) === 0
+                    && item.name.indexOf('-_') < 0);
+            let resetBtnVisible = false;
+            for (let item of currentSwatches.items) {
+                const colorKey = item.name.split('-')[1];
+                if (item.getValue() !== colorSchemeSrc[colorKey]) {
+                    resetBtnVisible = true;
+                    break;
+                }
+            }
+            this.items.get(0).items.get('reset-colors').setVisible(resetBtnVisible);
         },
 
         processSchemeChange: function() {
@@ -267,6 +284,7 @@ CRXB.util.registerPreferencesDialog = function() {
                 }
             });
             panel.items.get('colors-section-header').setText(this.colorScheme.getValue() + ' scheme colors');
+            this.processResetButtonState();
         },
 
         convertSwatchesToColorFields: function() {
@@ -274,7 +292,9 @@ CRXB.util.registerPreferencesDialog = function() {
             const swatches = panelElement.querySelectorAll('.color-swatch[type="text"]');
             for (let swatch of swatches) {
                 swatch.type = 'color';
+                swatch.addEventListener('change', () => this.processResetButtonState());
             }
+            this.processResetButtonState();
         },
 
     });
