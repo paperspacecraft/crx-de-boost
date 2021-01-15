@@ -33,7 +33,7 @@ class CrxPackager {
     //
 
     async download(path) {
-        path = path || this.config.path;
+        path = decodeURIComponent(path || this.config.path);
         let effectivePackageName = this.config.packageName || CrxPackager.getPackageName(path) + '-' + new Date().getTime();
 
         if (!effectivePackageName || !path) {
@@ -301,7 +301,7 @@ class CrxPackager {
             window.removeEventListener('message', doCommunication);
             if (frame && frame.opener) { // == is window
                 frame.close();
-            } else if (frame) {
+            } else if (frame && frame.remove) {
                 frame.remove();
             }
             if (clearUi) {

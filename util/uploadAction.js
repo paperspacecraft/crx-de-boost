@@ -7,6 +7,7 @@ CRXB.util.getUploadClipboardAction = function() {
         text: 'Install from Clipboard',
         iconCls: 'action-upload',
         handler: async (followSelectedNode) => {
+            await CRXB.util.save();
 
             // Collect node info
             followSelectedNode = followSelectedNode === true;
@@ -17,7 +18,11 @@ CRXB.util.getUploadClipboardAction = function() {
 
             const storedNodePath = CRXB.util.nodeToJcrPath(storedNode);
             const selectedNodePath = CRXB.util.nodeToJcrPath(selectedNode);
-            const needsMove  = followSelectedNode && selectedNode && storedNodePath !== selectedNodePath;
+            const needsMove  = followSelectedNode
+                && selectedNode
+                && storedNodePath.indexOf(selectedNodePath) !== 0;
+            // When storedNodePath is longer than selectedNodePath, and storedNodePath *starts with* selectedNodePath,
+            // it means that the node we'are going to paste it *under* the selected node. Therefore, moving is not needed
 
             const msg = new CrxProgressFacade('Import resource', 'Please wait');
 

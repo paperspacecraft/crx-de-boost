@@ -222,7 +222,7 @@ class CrxPackager {
 
 
     async download(path) {
-        path = path || this.config.path;
+        path = decodeURIComponent(path || this.config.path);
         let effectivePackageName = this.config.packageName || CrxPackager.getPackageName(path) + '-' + new Date().getTime();
 
         if (!effectivePackageName || !path) {
@@ -481,7 +481,7 @@ class CrxPackager {
             window.removeEventListener('message', doCommunication);
             if (frame && frame.opener) { 
                 frame.close();
-            } else if (frame) {
+            } else if (frame && frame.remove) {
                 frame.remove();
             }
             if (clearUi) {
@@ -3140,6 +3140,7 @@ CRXB.util.getUploadClipboardAction = function() {
         text: 'Install from Clipboard',
         iconCls: 'action-upload',
         handler: async (followSelectedNode) => {
+            await CRXB.util.save();
 
             followSelectedNode = followSelectedNode === true;
             const selectedNode = CRXB.util.getCurrent('node');
@@ -3148,7 +3149,9 @@ CRXB.util.getUploadClipboardAction = function() {
 
             const storedNodePath = CRXB.util.nodeToJcrPath(storedNode);
             const selectedNodePath = CRXB.util.nodeToJcrPath(selectedNode);
-            const needsMove  = followSelectedNode && selectedNode && storedNodePath !== selectedNodePath;
+            const needsMove  = followSelectedNode
+                && selectedNode
+                && storedNodePath.indexOf(selectedNodePath) !== 0;
 
             const msg = new CrxProgressFacade('Import resource', 'Please wait');
 
