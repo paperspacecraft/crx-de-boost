@@ -2,7 +2,7 @@
 
 // @name         CRX/DE Boost
 // @namespace    http://aem.velwetowl.org/
-// @version      0.1.5
+// @version      0.1.6
 // @description  Makes CRX/DE passable for an AEM developer environment
 // @author       Stephen Velwetowl
 
@@ -2057,63 +2057,106 @@ CRXB.util.registerReplicationDialog = function() {
 
 CRXB.util.getReplicationDialogActions = function() {
     if (CRX.ide.ReplicationDialogAction) {
-        return [CRX.ide.ReplicationDialogAction, CRX.ide.ReplicateAction];
+        return [CRX.ide.ReplicationDialogAction, CRX.ide.ReplicationActivateAction, CRX.ide.ReplicationDeactivateAction];
     }
 
     CRXB.util.registerReplicationDialog();
 
     CRX.ide.ReplicationDialogAction = new Ext.Action({
-        text: 'Replicate ...',
+        text: 'Replication ...',
         iconCls: 'action-replicate',
         dialogId: 'replicationdialog',
         handler: CRX.Util.openActionDialog
     });
 
-    CRX.ide.ReplicateAction = new Ext.Action({
-        text: 'Replicate now',
+    const DIALOG_WIDTH = 420;
+    const handleException = function(title, e) {
+        Ext.Msg.show({
+            title: title,
+            msg: `Could not ${title.toLowerCase()} <em>${path}</em>: ${e.message || e}`,
+            width: DIALOG_WIDTH,
+            buttons: Ext.Msg.OK,
+            iconCls: Ext.Msg.ERROR
+        });
+    };
+
+    CRX.ide.ReplicationActivateAction = new Ext.Action({
+        text: 'Activate',
         handler: async function() {
             const path = CRXB.util.getCurrent('path');
             if (!path) {
                 return;
             }
-            const formData = new FormData();
-            formData.append('path', path);
-            formData.append('action', 'replicate');
-            formData.append('_charset_', 'utf-8');
-
-            const handleException = function(e) {
-                Ext.Msg.show({
-                    title: 'Replication',
-                    msg: `Could not replicate <em>${path}</em>: ${e.message || e}`,
-                    width: 420,
-                    buttons: Ext.Msg.OK,
-                    iconCls: Ext.Msg.ERROR
-                });
-            };
+            const formData = [
+                'path=' + encodeURIComponent(path),
+                'action=replicate',
+                '_charset_=utf-8'
+            ];
 
             try {
                 const response = await fetch('replication.jsp', {
                     method: 'POST',
-                    body: formData
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+                    },
+                    body: formData.join('&')
                 });
                 if (response.ok) {
                     Ext.Msg.show({
-                        title: 'Replication',
-                        msg: `Successfully replicated <em>${path}</em>`,
-                        width: 420,
+                        title: 'Activation',
+                        msg: `Initiated activation of <em>${path}</em>`,
+                        width: DIALOG_WIDTH,
                         buttons: Ext.Msg.OK,
                         icon: Ext.Msg.INFO
                     });
                 } else {
-                    handleException(response.statusText);
+                    handleException('Activate', response.statusText);
                 }
             } catch (e) {
-                handleException(e);
+                handleException('Activate', e);
             }
         }
     });
 
-    return [CRX.ide.ReplicationDialogAction, CRX.ide.ReplicateAction];
+    CRX.ide.ReplicationDeactivateAction = new Ext.Action({
+        text: 'Deactivate',
+        handler: async function() {
+            const path = CRXB.util.getCurrent('path');
+            if (!path) {
+                return;
+            }
+            const formData = [
+                'path=' + encodeURIComponent(path),
+                'action=replicatedelete',
+                '_charset_=utf-8'
+            ];
+
+            try {
+                const response = await fetch('replication.jsp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+                    },
+                    body: formData.join('&')
+                });
+                if (response.ok) {
+                    Ext.Msg.show({
+                        title: 'Activation',
+                        msg: `Initiated deactivation of <em>${path}</em>`,
+                        width: DIALOG_WIDTH,
+                        buttons: Ext.Msg.OK,
+                        icon: Ext.Msg.INFO
+                    });
+                } else {
+                    handleException('Deactivate', response.statusText);
+                }
+            } catch (e) {
+                handleException('Deactivate', e);
+            }
+        }
+    });
+
+    return [CRX.ide.ReplicationDialogAction, CRX.ide.ReplicationActivateAction, CRX.ide.ReplicationDeactivateAction];
 };
 
 CRXB.util.registerSearchPanel = function() {
@@ -3268,9 +3311,9 @@ class SettingsHolder {
 
 CRXB.settings = new SettingsHolder()
     .add('highlight-colors', ['None','Yellow','Peach','Orange','Pale Green','Green','Pink','Salmon','Lavender','Blue','Gray','Orchid','Violet','Tan',])
-    .add('color-schemes', {'Blue': new CrxColorScheme({}), 'Ocean': new CrxColorScheme({"toolsBackground":"#1d9caf","toolsForeground":"#ebfffe","toolsHighlight":"#003f66","workspaceBackground":"#ffffff","workspaceShade":"#afe4e1","workspaceForeground":"#000000"}), 'Green': new CrxColorScheme({"toolsBackground":"#6dbb5d","toolsForeground":"#ffffff","toolsHighlight":"#386b3a","workspaceBackground":"#f5fff7","workspaceShade":"#d0ecca","workspaceForeground":"#000000"}), 'Lime': new CrxColorScheme({"toolsBackground":"#88b030","toolsForeground":"#faffe5","toolsHighlight":"#426001","workspaceBackground":"#ffffff","workspaceShade":"#ddeea0","workspaceForeground":"#000000"}), 'Peach': new CrxColorScheme({"toolsBackground":"#dc9450","toolsForeground":"#ffffff","toolsHighlight":"#813e04","workspaceBackground":"#fff9eb","workspaceShade":"#ffdec2","workspaceForeground":"#000000"}), 'Mango': new CrxColorScheme({"toolsBackground":"#deb429","toolsForeground":"#ffffff","toolsHighlight":"#744d17","workspaceBackground":"#fff7e5","workspaceShade":"#f5e5a0","workspaceForeground":"#000000"}), 'Pink': new CrxColorScheme({"toolsBackground":"#db7b7b","toolsForeground":"#ffffff","toolsHighlight":"#7c0e0e","workspaceBackground":"#ffffff","workspaceShade":"#fad3d3","workspaceForeground":"#000000"}), 'Fuchsia': new CrxColorScheme({"toolsBackground":"#b8569b","toolsForeground":"#ffffff","toolsHighlight":"#000074","workspaceBackground":"#ffffff","workspaceShade":"#d6c6f2","workspaceForeground":"#000000"})})
+    .add('color-schemes', {'Blue': new CrxColorScheme({}), 'Ocean': new CrxColorScheme({"toolsBackground":"#1d9caf","toolsForeground":"#ebfffe","toolsHighlight":"#003f66","workspaceBackground":"#ffffff","workspaceShade":"#afe4e1","workspaceForeground":"#000000"}), 'Stormcloud': new CrxColorScheme({"toolsBackground":"#4977c1","toolsForeground":"#ffffff","toolsHighlight":"#2058b1","workspaceBackground":"#ffffff","workspaceShade":"#b3d0ff","workspaceForeground":"#000000"}), 'Green': new CrxColorScheme({"toolsBackground":"#6dbb5d","toolsForeground":"#ffffff","toolsHighlight":"#386b3a","workspaceBackground":"#f5fff7","workspaceShade":"#d0ecca","workspaceForeground":"#000000"}), 'Lime': new CrxColorScheme({"toolsBackground":"#88b030","toolsForeground":"#faffe5","toolsHighlight":"#426001","workspaceBackground":"#ffffff","workspaceShade":"#ddeea0","workspaceForeground":"#000000"}), 'Canary': new CrxColorScheme({"toolsBackground":"#dfc30c","toolsForeground":"#ffffff","toolsHighlight":"#c6bf01","workspaceBackground":"#ffffff","workspaceShade":"#fffdb8","workspaceForeground":"#2e0000"}), 'Peach': new CrxColorScheme({"toolsBackground":"#dc9450","toolsForeground":"#ffffff","toolsHighlight":"#813e04","workspaceBackground":"#fff9eb","workspaceShade":"#ffdec2","workspaceForeground":"#000000"}), 'Mango': new CrxColorScheme({"toolsBackground":"#deb429","toolsForeground":"#ffffff","toolsHighlight":"#744d17","workspaceBackground":"#fff7e5","workspaceShade":"#f5e5a0","workspaceForeground":"#000000"}), 'Pink': new CrxColorScheme({"toolsBackground":"#db7b7b","toolsForeground":"#ffffff","toolsHighlight":"#7c0e0e","workspaceBackground":"#ffffff","workspaceShade":"#fad3d3","workspaceForeground":"#000000"}), 'Fuchsia': new CrxColorScheme({"toolsBackground":"#b8569b","toolsForeground":"#ffffff","toolsHighlight":"#000074","workspaceBackground":"#ffffff","workspaceShade":"#d6c6f2","workspaceForeground":"#000000"}), 'Violet': new CrxColorScheme({"toolsBackground":"#a284f5","toolsForeground":"#ffffff","toolsHighlight":"#8207bb","workspaceBackground":"#ffffff","workspaceShade":"#e3c7ff","workspaceForeground":"#000000"}), 'Black and White': new CrxColorScheme({"toolsBackground":"#999999","toolsForeground":"#ffffff","toolsHighlight":"#3d3d3d","workspaceBackground":"#ffffff","workspaceShade":"#d4d4d4","workspaceForeground":"#000000"})})
     .add('favicon', 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 557 602"><path fill="%23111" d="M354 117c-13,-27 -61,-6 -74,27 -13,33 5,63 42,82 37,19 89,11 120,-42 27,-47 22,-164 -116,-183 0,0 0,0 -1,0 -180,-8 -268,124 -289,191 -6,20 -10,43 -9,68l-1 0c-15,0 -26,12 -26,26l0 240c0,15 12,26 26,26l64 0c15,0 26,-12 26,-26l0 -19c0,-15 -12,-26 -26,-26l-5 0c-15,0 -26,-12 -26,-26l0 -84c17,33 38,60 60,84 15,16 33,42 46,50l0 72c0,15 12,26 26,26l64 0c15,0 26,-12 26,-26l0 -19c0,-15 -12,-26 -26,-26l-5 0c-14,0 -26,-11 -26,-25l91 0 37 0 0 71c0,15 12,26 26,26l64 0c15,0 26,-12 26,-26l0 -19c0,-15 -12,-26 -26,-26l-5 0c-14,0 -26,-11 -26,-25l79 0c7,0 14,-5 15,-10 1,-3 0,-5 -2,-7l-33 -27 59 25c17,7 40,-20 27,-40 -12,-18 -28,-36 -41,-53 -1,-1 -1,-2 -1,-3 -4,-33 -32,-58 -66,-58 -1,0 -1,0 -2,0 -3,0 -5,-1 -6,-3 -15,-24 -56,-53 -90,-57 -22,-2 -53,11 -69,52 -1,3 -5,5 -8,4 -52,-10 -72,-109 -51,-166 14,-39 68,-83 106,-84 30,0 44,14 57,36 10,17 8,46 -14,53 -19,6 -40,-8 -35,-22 3,-10 30,-10 21,-28zm89 260c14,0 26,12 26,26 0,14 -12,26 -26,26 -14,0 -26,-12 -26,-26 0,-14 12,-26 26,-26z"/></svg>')
-    .add('version', '0.1.5');
+    .add('version', '0.1.6');
 
 CRXB.styles = new (function() {
     this._src = {};

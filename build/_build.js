@@ -16,7 +16,7 @@ const SVG_PATH = './svg/out';
 const OUT_FILE_PATH = './out/crxde-boost.user.js';
 
 const ENCODING = 'UTF8';
-const CURRENT_VERSION = '0.1.5';
+const CURRENT_VERSION = '0.1.6';
 
 
 const BOOKMARK_SETTINGS = {
@@ -46,6 +46,14 @@ const COLOR_SCHEMES = {
         workspaceShade: "#afe4e1",
         workspaceForeground: "#000000"
     },
+    'Stormcloud': {
+        toolsBackground: "#4977c1",
+        toolsForeground: "#ffffff",
+        toolsHighlight: "#2058b1",
+        workspaceBackground: "#ffffff",
+        workspaceShade: "#b3d0ff",
+        workspaceForeground: "#000000"
+    },
     'Green': {
         toolsBackground: "#6dbb5d",
         toolsForeground: "#ffffff",
@@ -62,10 +70,18 @@ const COLOR_SCHEMES = {
         workspaceShade: "#ddeea0",
         workspaceForeground: "#000000"
     },
+    'Canary': {
+        toolsBackground: "#f0d000",
+        toolsForeground: "#ffffff",
+        toolsHighlight: "#ada800",
+        workspaceBackground: "#ffffff",
+        workspaceShade: "#fffdb8",
+        workspaceForeground: "#2e0000"
+    },
     'Peach': {
         toolsBackground: "#dc9450",
         toolsForeground: "#ffffff",
-        toolsHighlight: "#813e04",
+        toolsHighlight: "#706c00",
         workspaceBackground: "#fff9eb",
         workspaceShade: "#ffdec2",
         workspaceForeground: "#000000"
@@ -92,6 +108,22 @@ const COLOR_SCHEMES = {
         toolsHighlight: "#000074",
         workspaceBackground: "#ffffff",
         workspaceShade: "#d6c6f2",
+        workspaceForeground: "#000000"
+    },
+    'Violet': {
+        toolsBackground: "#a284f5",
+        toolsForeground: "#ffffff",
+        toolsHighlight: "#8207bb",
+        workspaceBackground: "#ffffff",
+        workspaceShade: "#e3c7ff",
+        workspaceForeground: "#000000",
+    },
+    'Black and White': {
+        toolsBackground: "#999999",
+        toolsForeground: "#ffffff",
+        toolsHighlight: "#3d3d3d",
+        workspaceBackground: "#ffffff",
+        workspaceShade: "#d4d4d4",
         workspaceForeground: "#000000"
     },
 };
