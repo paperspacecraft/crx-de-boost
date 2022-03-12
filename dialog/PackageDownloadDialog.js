@@ -7,7 +7,7 @@ CRXB.util.registerDownloadDialog = function() {
         title: 'Download',
         modal: true,
         width: 480,
-        height: 230,
+        height: 220,
         layout: 'fit',
         buttonAlign: 'center',
 
@@ -35,6 +35,10 @@ CRXB.util.registerDownloadDialog = function() {
                 }
             });
 
+            this.persist = new Ext.form.Checkbox({
+                fieldLabel: 'Persist package in instance'
+            });
+
             this.okButton = new Ext.Button({
                 text: 'OK',
                 handler: () => {
@@ -43,8 +47,8 @@ CRXB.util.registerDownloadDialog = function() {
                     }
                     CRX.ide.DownloadAction.execute({
                         packageName: this.packageName.getValue(),
-                        packageGroup: this.packageGroup.isVisible() ? this.packageGroup.getValue() : undefined,
-                        persist: this.packageGroup.isVisible(),
+                        packageGroup: this.packageGroup.getValue(),
+                        persist: this.persist.getValue(),
                         acHandling: this.acHandling.getValue()
                     });
                     this.close();
@@ -58,36 +62,16 @@ CRXB.util.registerDownloadDialog = function() {
                     xtype: 'panel',
                     layout: 'form',
                     bodyStyle: 'padding: 20px 12px 0 12px',
-                    labelWidth: 100,
+                    labelWidth: 140,
                     defaults: {
                         msgTarget: 'side',
                         anchor: '98%',
                     },
                     items: [
                         this.packageName,
+                        this.packageGroup,
                         this.acHandling,
-                        {
-                            xtype: 'checkbox',
-                            fieldLabel: 'Persist package',
-                            listeners: {
-                                'check': (checkbox, value) => {
-                                    this.packageGroup.setDisabled(!value);
-                                    this.packageGroup.setVisible(value);
-                                    const itemGroup =  this.packageGroup.getEl().up('.x-form-item');
-                                    if (value) {
-                                        itemGroup.show();
-                                        if (!this.packageGroup.getValue()) {
-                                            this.packageGroup.setValue(CrxPackager.DEFAULT_PACKAGE_GROUP);
-                                        }
-                                        this.packageGroup.focus();
-                                    } else {
-                                        this.packageGroup.clearInvalid();
-                                        itemGroup.hide();
-                                    }
-                                }
-                            }
-                        },
-                        this.packageGroup
+                        this.persist
                     ],
                 },
                 buttonAlign: 'center',
@@ -116,18 +100,19 @@ CRXB.util.registerDownloadDialog = function() {
             CRX.ide.PackageDownloadDialog.superclass.initComponent.call(this);
 
             this.packageName.setValue(CrxPackager.getPackageName(CRXB.util.getCurrent('path')));
+            this.packageGroup.setValue(CRXB.settings.get('package-group') || CrxPackager.DEFAULT_PACKAGE_GROUP);
             this.acHandling.setValue(CRXB.settings.get('default-ac-handling') || CrxPackager.AC_HANDLING_OPTIONS[0]);
 
             this.on('show', function() {
-                this.packageGroup.getEl().up('.x-form-item').hide();
+                // this.packageGroup.getEl().up('.x-form-item').hide();
                 this.packageName.focus();
             });
         },
 
         isValid: function() {
             return this.packageName.isValid()
-                && this.acHandling.isValid()
-                && (!this.packageGroup.isVisible() || this.packageGroup.isValid());
+                && this.packageGroup.isValid()
+                && this.acHandling.isValid();
         }
 
     });
@@ -200,12 +185,12 @@ CRXB.util.getDownloadActions = function() {
             if (args.packageName) {
                 crxPackagerConfig.packageName = args.packageName;
             }
+            crxPackagerConfig.groupName = args.packageGroup || CRXB.settings.get('package-group') || CrxPackager.DEFAULT_PACKAGE_GROUP;
             if (args.acHandling) {
                 crxPackagerConfig.acHandling = args.acHandling;
             }
-            if (args.persist && args.packageGroup) {
+            if (args.persist) {
                 crxPackagerConfig.cleanUp = false;
-                crxPackagerConfig.groupName = args.packageGroup;
             }
 
             const packager = new CrxPackager(crxPackagerConfig);

@@ -7,7 +7,7 @@ CRXB.util.registerSettingsDialog = function() {
         title: 'Settings',
         modal: true,
         width: 420,
-        height: 450,
+        height: 480,
         layout: 'fit',
 
         constructor: function(config) {
@@ -31,12 +31,19 @@ CRXB.util.registerSettingsDialog = function() {
 
             this.openInEditMode = new Ext.form.Checkbox({
                 id: 'prefer-edit-mode',
-                fieldLabel: 'Open pages in editmode',
+                fieldLabel: 'Editmode by default',
             });
 
             this.allowDragging = new Ext.form.Checkbox({
                 id: 'allow-dragging',
                 fieldLabel: 'Allow dragging nodes',
+            });
+
+            this.packageGroup = new Ext.form.TextField({
+                id: 'package-group',
+                fieldLabel: 'Default package group',
+                allowBlank: false,
+                defaultValue: CrxPackager.DEFAULT_PACKAGE_GROUP
             });
 
             this.defaultAcHandling = new Ext.form.ComboBox({
@@ -98,6 +105,7 @@ CRXB.util.registerSettingsDialog = function() {
                             text: 'Packager settings',
                             anchor: false,
                         },
+                        this.packageGroup,
                         this.defaultAcHandling,
                         this.inMemPackageSize,
                     ],
