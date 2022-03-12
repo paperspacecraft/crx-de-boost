@@ -2,7 +2,7 @@
 
 // @name         CRX/DE Boost
 // @namespace    http://aem.velwetowl.org/
-// @version      0.1.6
+// @version      0.1.7
 // @description  Makes CRX/DE passable for an AEM developer environment
 // @author       Stephen Velwetowl
 
@@ -244,7 +244,7 @@ class CrxPackager {
             const createUrl = CrxPackager.getEncodedUrl(this.config.endpoints.create, {
                 cmd: 'create',
                 packageName: argument.packageName,
-                groupName: this.config.groupName || 'transient'
+                groupName: this.config.groupName || CrxPackager.DEFAULT_PACKAGE_GROUP
             });
             const createResponse = await fetch(createUrl, {method: 'post'});
             const createResponseJson = createResponse.ok && CrxPackager.isJson(createResponse)
@@ -814,7 +814,7 @@ CRXB.util.registerDownloadDialog = function() {
         title: 'Download',
         modal: true,
         width: 480,
-        height: 230,
+        height: 220,
         layout: 'fit',
         buttonAlign: 'center',
 
@@ -842,6 +842,10 @@ CRXB.util.registerDownloadDialog = function() {
                 }
             });
 
+            this.persist = new Ext.form.Checkbox({
+                fieldLabel: 'Persist package in instance'
+            });
+
             this.okButton = new Ext.Button({
                 text: 'OK',
                 handler: () => {
@@ -850,8 +854,8 @@ CRXB.util.registerDownloadDialog = function() {
                     }
                     CRX.ide.DownloadAction.execute({
                         packageName: this.packageName.getValue(),
-                        packageGroup: this.packageGroup.isVisible() ? this.packageGroup.getValue() : undefined,
-                        persist: this.packageGroup.isVisible(),
+                        packageGroup: this.packageGroup.getValue(),
+                        persist: this.persist.getValue(),
                         acHandling: this.acHandling.getValue()
                     });
                     this.close();
@@ -865,36 +869,16 @@ CRXB.util.registerDownloadDialog = function() {
                     xtype: 'panel',
                     layout: 'form',
                     bodyStyle: 'padding: 20px 12px 0 12px',
-                    labelWidth: 100,
+                    labelWidth: 140,
                     defaults: {
                         msgTarget: 'side',
                         anchor: '98%',
                     },
                     items: [
                         this.packageName,
+                        this.packageGroup,
                         this.acHandling,
-                        {
-                            xtype: 'checkbox',
-                            fieldLabel: 'Persist package',
-                            listeners: {
-                                'check': (checkbox, value) => {
-                                    this.packageGroup.setDisabled(!value);
-                                    this.packageGroup.setVisible(value);
-                                    const itemGroup =  this.packageGroup.getEl().up('.x-form-item');
-                                    if (value) {
-                                        itemGroup.show();
-                                        if (!this.packageGroup.getValue()) {
-                                            this.packageGroup.setValue(CrxPackager.DEFAULT_PACKAGE_GROUP);
-                                        }
-                                        this.packageGroup.focus();
-                                    } else {
-                                        this.packageGroup.clearInvalid();
-                                        itemGroup.hide();
-                                    }
-                                }
-                            }
-                        },
-                        this.packageGroup
+                        this.persist
                     ],
                 },
                 buttonAlign: 'center',
@@ -923,18 +907,18 @@ CRXB.util.registerDownloadDialog = function() {
             CRX.ide.PackageDownloadDialog.superclass.initComponent.call(this);
 
             this.packageName.setValue(CrxPackager.getPackageName(CRXB.util.getCurrent('path')));
+            this.packageGroup.setValue(CRXB.settings.get('package-group') || CrxPackager.DEFAULT_PACKAGE_GROUP);
             this.acHandling.setValue(CRXB.settings.get('default-ac-handling') || CrxPackager.AC_HANDLING_OPTIONS[0]);
 
             this.on('show', function() {
-                this.packageGroup.getEl().up('.x-form-item').hide();
                 this.packageName.focus();
             });
         },
 
         isValid: function() {
             return this.packageName.isValid()
-                && this.acHandling.isValid()
-                && (!this.packageGroup.isVisible() || this.packageGroup.isValid());
+                && this.packageGroup.isValid()
+                && this.acHandling.isValid();
         }
 
     });
@@ -1007,12 +991,12 @@ CRXB.util.getDownloadActions = function() {
             if (args.packageName) {
                 crxPackagerConfig.packageName = args.packageName;
             }
+            crxPackagerConfig.groupName = args.packageGroup || CRXB.settings.get('package-group') || CrxPackager.DEFAULT_PACKAGE_GROUP;
             if (args.acHandling) {
                 crxPackagerConfig.acHandling = args.acHandling;
             }
-            if (args.persist && args.packageGroup) {
+            if (args.persist) {
                 crxPackagerConfig.cleanUp = false;
-                crxPackagerConfig.groupName = args.packageGroup;
             }
 
             const packager = new CrxPackager(crxPackagerConfig);
@@ -2486,7 +2470,7 @@ CRXB.util.registerSettingsDialog = function() {
         title: 'Settings',
         modal: true,
         width: 420,
-        height: 450,
+        height: 480,
         layout: 'fit',
 
         constructor: function(config) {
@@ -2510,12 +2494,19 @@ CRXB.util.registerSettingsDialog = function() {
 
             this.openInEditMode = new Ext.form.Checkbox({
                 id: 'prefer-edit-mode',
-                fieldLabel: 'Open pages in editmode',
+                fieldLabel: 'Editmode by default',
             });
 
             this.allowDragging = new Ext.form.Checkbox({
                 id: 'allow-dragging',
                 fieldLabel: 'Allow dragging nodes',
+            });
+
+            this.packageGroup = new Ext.form.TextField({
+                id: 'package-group',
+                fieldLabel: 'Default package group',
+                allowBlank: false,
+                defaultValue: CrxPackager.DEFAULT_PACKAGE_GROUP
             });
 
             this.defaultAcHandling = new Ext.form.ComboBox({
@@ -2577,6 +2568,7 @@ CRXB.util.registerSettingsDialog = function() {
                             text: 'Packager settings',
                             anchor: false,
                         },
+                        this.packageGroup,
                         this.defaultAcHandling,
                         this.inMemPackageSize,
                     ],
@@ -2675,53 +2667,6 @@ CRXB.util.getSettingsDialogAction = function() {
     return CRX.ide.SettingsDialogAction;
 };
 
-CRXB.util.getDragActions = function() {
-    if (CRX.ide.AllowDragAction) {
-        return [CRX.ide.AllowDragAction, CRX.ide.LockDragAction];
-    }
-
-    CRX.ide.AllowDragAction = new Ext.Action({
-        text: 'Unlock for dragging',
-        handler: () => {
-            const node = CRXB.util.getCurrent('node');
-            node.draggable = true;
-            node.ui.elNode.classList.add('drag');
-        }
-    });
-    CRX.ide.AllowDragAction.checkActive = function() {
-        const currentNode = CRXB.util.getCurrent('node');
-        const allowDragging = CRXB.settings.get('allow-dragging')
-        const disabled = !currentNode
-            || currentNode.draggable
-            || allowDragging
-            || currentNode === Ext.getCmp(CRX.ide.TREE_ID).getRootNode();
-        this.setDisabled(disabled);
-    };
-
-    CRX.ide.LockDragAction = new Ext.Action({
-        text: 'Lock for dragging',
-        handler: (node) => {
-            if (!node || node.getXType && (node.getXType() === 'menuitem')) {
-                node = CRXB.util.getCurrent('node');
-            }
-            node.draggable = false;
-            node.ui.elNode.classList.remove('drag');
-        }
-    });
-    CRX.ide.LockDragAction.checkActive = function() {
-        const currentNode = CRXB.util.getCurrent('node');
-        const allowDragging = CRXB.settings.get('allow-dragging');
-        const disabled = !currentNode
-            || !currentNode.draggable
-            || allowDragging
-            || currentNode === Ext.getCmp(CRX.ide.TREE_ID).getRootNode();
-        this.setDisabled(disabled);
-    };
-
-    return [CRX.ide.AllowDragAction, CRX.ide.LockDragAction];
-};
-
-
 CRXB.util.arrangeMenu = function(menu, order, exclude) {
     let position = 0;
     const flatOrder = order.flatMap(item => Array.isArray(item) ? item : [item]);
@@ -2731,6 +2676,8 @@ CRXB.util.arrangeMenu = function(menu, order, exclude) {
             if (found && found.length) {
                 menu.insert(position++, found[0]);
             }
+        } else if (typeof item === 'object' && item.menu && typeof item.menu === 'object') {
+            menu.insert(position++, item);
         } else if (typeof item === 'object') {
             const found = menu.findBy((mnu) => mnu === item || mnu.baseAction === item);
             if (found && found.length) {
@@ -2822,55 +2769,6 @@ CRXB.util.getEnvironmentLabel = function() {
     const prefs = CRXB.settings.get(SettingsHolder.INSTANCE_PREFERENCES);
     return (prefs.environment || {})[window.location.host] || window.location.host;
 };
-
-
-
-CRXB.util.getOpenPageActions = function() {
-    if (CRX.ide.OpenPageViewAction) {
-        return [CRX.ide.OpenPageViewAction, CRX.ide.OpenPageEditAction];
-    }
-
-    CRX.ide.OpenPageViewAction = new Ext.Action({
-        text: 'Open page',
-        iconCls: 'action-link',
-        handler: () => {
-            const node = CRXB.util.getCurrent('node');
-            const location = CRX.Util.getLaunchpadContextPath()
-                + CRX.Util.getLocalWorkspacePath(node.getRealPath())
-                + '.html?wcmmode=disabled';
-            window.open(location);
-        }
-    });
-    CRX.ide.OpenPageViewAction.checkActive = function() {
-        const currentNode = CRXB.util.getCurrent('node');
-        const isPage = currentNode.ui.iconNode.classList.contains('page');
-        const disabled = !currentNode || !isPage || !CRXB.settings.get('prefer-edit-mode');
-        this.setDisabled(disabled);
-    };
-
-    CRX.ide.OpenPageEditAction = new Ext.Action({
-        text: 'Open in edit mode',
-        iconCls: 'action-link',
-        handler: () => {
-            const node = CRXB.util.getCurrent('node');
-            const location = CRX.Util.getLaunchpadContextPath().replace(/crx\/de\/?$/i, '')
-                + '/editor.html'
-                + CRX.Util.getLocalWorkspacePath(node.getRealPath()).replace(/\/$/, '')
-                + '.html';
-            window.open(location);
-        }
-    });
-    CRX.ide.OpenPageEditAction.checkActive = function() {
-        const currentNode = CRXB.util.getCurrent('node');
-        const isPage = currentNode.ui.iconNode.classList.contains('page');
-        const disabled = !currentNode || !isPage || CRXB.settings.get('prefer-edit-mode');
-        this.setDisabled(disabled);
-    };
-
-    return [CRX.ide.OpenPageViewAction, CRX.ide.OpenPageEditAction];
-};
-
-
 
 
 
@@ -3123,156 +3021,6 @@ CRXB.util.performQuery = function(value, type) {
     repositoryWrapper.items.get(1).query(value, type);
 };
 
-CRXB.util.getSortAction = function() {
-    if (CRX.ide.SortAction) {
-        return CRX.ide.SortAction;
-    }
-    CRX.ide.SortAction = new Ext.Action({
-        text: 'Sort',
-        iconCls: 'action-sorting-alpha',
-        handler: (alphabetic = true) => {
-            const current = CRXB.util.getCurrent();
-            if (!current) {
-                return;
-            }
-            const currentSortedNodes = GM_getValue('profile:sortedNodes') || [];
-            let sortingChanged = false;
-            if (alphabetic && currentSortedNodes.indexOf(current.path) < 0) {
-                currentSortedNodes.push(current.path);
-                current.node.ui.addClass('sorted');
-                sortingChanged = true;
-            } else if (!alphabetic && currentSortedNodes.indexOf(current.path) >= 0) {
-                currentSortedNodes.splice(currentSortedNodes.indexOf(current.path), 1);
-                current.node.ui.removeClass('sorted');
-                sortingChanged = true;
-            }
-            if (sortingChanged) {
-                GM_setValue('profile:sortedNodes', currentSortedNodes);
-                Ext.getCmp(CRX.ide.TREE_ID).sorter.sortedNodes = currentSortedNodes;
-                CRX.ide.RefreshAction.initialConfig.handler();
-            }
-        }
-    });
-    CRX.ide.SortAction.checkActive = function() {
-        this.setDisabled(CRXB.util.getCurrent('node').ui.getEl().querySelector('div').classList.contains('sorted'));
-    };
-    return CRX.ide.SortAction;
-};
-
-CRXB.util.getUnsortAction = function() {
-    if (CRX.ide.UnsortAction) {
-        return CRX.ide.UnsortAction;
-    }
-    CRX.ide.UnsortAction = new Ext.Action({
-        text: 'Unsort',
-        iconCls: 'action-sorting-default',
-        handler: () => CRX.ide.SortAction.execute(false)
-    });
-    CRX.ide.UnsortAction.checkActive = function() {
-        this.setDisabled(!CRXB.util.getCurrent('node').ui.getEl().querySelector('div').classList.contains('sorted'));
-    };
-    return CRX.ide.UnsortAction;
-};
-
-CRXB.util.getUploadClipboardAction = function() {
-    if (CRX.ide.UploadClipboardAction) {
-        return CRX.ide.UploadClipboardAction;
-    }
-
-    CRX.ide.UploadClipboardAction = new Ext.Action({
-        text: 'Install from Clipboard',
-        iconCls: 'action-upload',
-        handler: async (followSelectedNode) => {
-            await CRXB.util.save();
-
-            followSelectedNode = followSelectedNode === true;
-            const selectedNode = CRXB.util.getCurrent('node');
-            const storedNode = CRX.Clipboard.getData().data;
-
-
-            const storedNodePath = CRXB.util.nodeToJcrPath(storedNode);
-            const selectedNodePath = CRXB.util.nodeToJcrPath(selectedNode);
-            const needsMove  = followSelectedNode
-                && selectedNode
-                && storedNodePath.indexOf(selectedNodePath) !== 0;
-
-            const msg = new CrxProgressFacade('Import resource', 'Please wait');
-
-            const processPackagerSuccess = async (status) => {
-                msg.show(1, 'Finished');
-                msg.hide(500);
-
-                if (!status || !status.jcrPath) {
-                    return;
-                }
-                CRXB.util.findNearestCommon(CRXB.util.getCurrent('node'), status.jcrPath).reload(() => {
-                    CRXB.util.setLocation(status.jcrPath);
-                });
-            };
-
-            const processPackagerFailure = (status) => {
-                const errorMsg = typeof status === 'string'
-                    ?  status
-                    : `Importing of ${status.jcrPath} failed at "${status.stage}": ${status.httpStatus} ${status.message}`;
-                console.error(errorMsg);
-                Ext.Msg.show({
-                    title: 'Error',
-                    msg: errorMsg,
-                    width: 420,
-                    buttons: Ext.MessageBox.OK,
-                    icon: Ext.MessageBox.ERROR
-                });
-            };
-
-            const processPackagerPreInstall = async (status) => {
-                if (!needsMove || !status.blob) {
-                    return status;
-                }
-                const modifier = new CrxPackageModifier();
-                status.blob = await modifier.modify(status.blob, selectedNodePath);
-                return status;
-            };
-
-            const processPackagerStatus = (status) => msg.show(status.completion, status.stage + '... Please wait');
-
-            const doImport = () => {
-                const packager = new CrxPackager({
-                    cleanUp: true,
-                    success: processPackagerSuccess,
-                    failure: processPackagerFailure,
-                    status: processPackagerStatus,
-                    preInstall: processPackagerPreInstall
-                });
-                packager.import(storedNode.propOrigin, storedNodePath);
-            };
-
-            Ext.Msg.show({
-                title: 'Import content?',
-                msg: `The node "<em>${storedNodePath}</em>" in clipboard is coming from another host (${storedNode.propOrigin}).<br><br>
-                       Agree to try and import it as an AEM package?`,
-                width: 420,
-                icon: Ext.MessageBox.QUESTION,
-                buttons: Ext.MessageBox.YESNO,
-                fn: function(btn) {
-                    if (btn === 'yes') {
-                        doImport();
-                    }
-                }
-            });
-        }
-    });
-
-    CRX.ide.UploadClipboardAction.checkActive = function() {
-        const storedNode = CRX.Clipboard.getData().data;
-        const enableAction = storedNode && storedNode.propOrigin && storedNode.propOrigin !== document.location.origin;
-        this.setDisabled(!enableAction);
-    };
-
-    return CRX.ide.UploadClipboardAction;
-};
-
-
-
 class SettingsHolder {
 
     static SETTINGS = 'profile:settings';
@@ -3311,9 +3059,9 @@ class SettingsHolder {
 
 CRXB.settings = new SettingsHolder()
     .add('highlight-colors', ['None','Yellow','Peach','Orange','Pale Green','Green','Pink','Salmon','Lavender','Blue','Gray','Orchid','Violet','Tan',])
-    .add('color-schemes', {'Blue': new CrxColorScheme({}), 'Ocean': new CrxColorScheme({"toolsBackground":"#1d9caf","toolsForeground":"#ebfffe","toolsHighlight":"#003f66","workspaceBackground":"#ffffff","workspaceShade":"#afe4e1","workspaceForeground":"#000000"}), 'Stormcloud': new CrxColorScheme({"toolsBackground":"#4977c1","toolsForeground":"#ffffff","toolsHighlight":"#2058b1","workspaceBackground":"#ffffff","workspaceShade":"#b3d0ff","workspaceForeground":"#000000"}), 'Green': new CrxColorScheme({"toolsBackground":"#6dbb5d","toolsForeground":"#ffffff","toolsHighlight":"#386b3a","workspaceBackground":"#f5fff7","workspaceShade":"#d0ecca","workspaceForeground":"#000000"}), 'Lime': new CrxColorScheme({"toolsBackground":"#88b030","toolsForeground":"#faffe5","toolsHighlight":"#426001","workspaceBackground":"#ffffff","workspaceShade":"#ddeea0","workspaceForeground":"#000000"}), 'Canary': new CrxColorScheme({"toolsBackground":"#dfc30c","toolsForeground":"#ffffff","toolsHighlight":"#c6bf01","workspaceBackground":"#ffffff","workspaceShade":"#fffdb8","workspaceForeground":"#2e0000"}), 'Peach': new CrxColorScheme({"toolsBackground":"#dc9450","toolsForeground":"#ffffff","toolsHighlight":"#813e04","workspaceBackground":"#fff9eb","workspaceShade":"#ffdec2","workspaceForeground":"#000000"}), 'Mango': new CrxColorScheme({"toolsBackground":"#deb429","toolsForeground":"#ffffff","toolsHighlight":"#744d17","workspaceBackground":"#fff7e5","workspaceShade":"#f5e5a0","workspaceForeground":"#000000"}), 'Pink': new CrxColorScheme({"toolsBackground":"#db7b7b","toolsForeground":"#ffffff","toolsHighlight":"#7c0e0e","workspaceBackground":"#ffffff","workspaceShade":"#fad3d3","workspaceForeground":"#000000"}), 'Fuchsia': new CrxColorScheme({"toolsBackground":"#b8569b","toolsForeground":"#ffffff","toolsHighlight":"#000074","workspaceBackground":"#ffffff","workspaceShade":"#d6c6f2","workspaceForeground":"#000000"}), 'Violet': new CrxColorScheme({"toolsBackground":"#a284f5","toolsForeground":"#ffffff","toolsHighlight":"#8207bb","workspaceBackground":"#ffffff","workspaceShade":"#e3c7ff","workspaceForeground":"#000000"}), 'Black and White': new CrxColorScheme({"toolsBackground":"#999999","toolsForeground":"#ffffff","toolsHighlight":"#3d3d3d","workspaceBackground":"#ffffff","workspaceShade":"#d4d4d4","workspaceForeground":"#000000"})})
+    .add('color-schemes', {'Blue': new CrxColorScheme({}), 'Ocean': new CrxColorScheme({"toolsBackground":"#1d9caf","toolsForeground":"#ebfffe","toolsHighlight":"#003f66","workspaceBackground":"#ffffff","workspaceShade":"#afe4e1","workspaceForeground":"#000000"}), 'Stormcloud': new CrxColorScheme({"toolsBackground":"#4977c1","toolsForeground":"#ffffff","toolsHighlight":"#2058b1","workspaceBackground":"#ffffff","workspaceShade":"#b3d0ff","workspaceForeground":"#000000"}), 'Green': new CrxColorScheme({"toolsBackground":"#6dbb5d","toolsForeground":"#ffffff","toolsHighlight":"#386b3a","workspaceBackground":"#f5fff7","workspaceShade":"#d0ecca","workspaceForeground":"#000000"}), 'Lime': new CrxColorScheme({"toolsBackground":"#88b030","toolsForeground":"#faffe5","toolsHighlight":"#426001","workspaceBackground":"#ffffff","workspaceShade":"#ddeea0","workspaceForeground":"#000000"}), 'Canary': new CrxColorScheme({"toolsBackground":"#f0d000","toolsForeground":"#ffffff","toolsHighlight":"#ada800","workspaceBackground":"#ffffff","workspaceShade":"#fffdb8","workspaceForeground":"#2e0000"}), 'Peach': new CrxColorScheme({"toolsBackground":"#dc9450","toolsForeground":"#ffffff","toolsHighlight":"#706c00","workspaceBackground":"#fff9eb","workspaceShade":"#ffdec2","workspaceForeground":"#000000"}), 'Mango': new CrxColorScheme({"toolsBackground":"#deb429","toolsForeground":"#ffffff","toolsHighlight":"#744d17","workspaceBackground":"#fff7e5","workspaceShade":"#f5e5a0","workspaceForeground":"#000000"}), 'Pink': new CrxColorScheme({"toolsBackground":"#db7b7b","toolsForeground":"#ffffff","toolsHighlight":"#7c0e0e","workspaceBackground":"#ffffff","workspaceShade":"#fad3d3","workspaceForeground":"#000000"}), 'Fuchsia': new CrxColorScheme({"toolsBackground":"#b8569b","toolsForeground":"#ffffff","toolsHighlight":"#000074","workspaceBackground":"#ffffff","workspaceShade":"#d6c6f2","workspaceForeground":"#000000"}), 'Violet': new CrxColorScheme({"toolsBackground":"#a284f5","toolsForeground":"#ffffff","toolsHighlight":"#8207bb","workspaceBackground":"#ffffff","workspaceShade":"#e3c7ff","workspaceForeground":"#000000"}), 'Black and White': new CrxColorScheme({"toolsBackground":"#999999","toolsForeground":"#ffffff","toolsHighlight":"#3d3d3d","workspaceBackground":"#ffffff","workspaceShade":"#d4d4d4","workspaceForeground":"#000000"})})
     .add('favicon', 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 557 602"><path fill="%23111" d="M354 117c-13,-27 -61,-6 -74,27 -13,33 5,63 42,82 37,19 89,11 120,-42 27,-47 22,-164 -116,-183 0,0 0,0 -1,0 -180,-8 -268,124 -289,191 -6,20 -10,43 -9,68l-1 0c-15,0 -26,12 -26,26l0 240c0,15 12,26 26,26l64 0c15,0 26,-12 26,-26l0 -19c0,-15 -12,-26 -26,-26l-5 0c-15,0 -26,-12 -26,-26l0 -84c17,33 38,60 60,84 15,16 33,42 46,50l0 72c0,15 12,26 26,26l64 0c15,0 26,-12 26,-26l0 -19c0,-15 -12,-26 -26,-26l-5 0c-14,0 -26,-11 -26,-25l91 0 37 0 0 71c0,15 12,26 26,26l64 0c15,0 26,-12 26,-26l0 -19c0,-15 -12,-26 -26,-26l-5 0c-14,0 -26,-11 -26,-25l79 0c7,0 14,-5 15,-10 1,-3 0,-5 -2,-7l-33 -27 59 25c17,7 40,-20 27,-40 -12,-18 -28,-36 -41,-53 -1,-1 -1,-2 -1,-3 -4,-33 -32,-58 -66,-58 -1,0 -1,0 -2,0 -3,0 -5,-1 -6,-3 -15,-24 -56,-53 -90,-57 -22,-2 -53,11 -69,52 -1,3 -5,5 -8,4 -52,-10 -72,-109 -51,-166 14,-39 68,-83 106,-84 30,0 44,14 57,36 10,17 8,46 -14,53 -19,6 -40,-8 -35,-22 3,-10 30,-10 21,-28zm89 260c14,0 26,12 26,26 0,14 -12,26 -26,26 -14,0 -26,-12 -26,-26 0,-14 12,-26 26,-26z"/></svg>')
-    .add('version', '0.1.6');
+    .add('version', '0.1.7');
 
 CRXB.styles = new (function() {
     this._src = {};
@@ -3367,7 +3115,7 @@ CRXB.styles = new (function() {
     };
 })()
     .add('download', `html, body {color: \${COLOR_TOOLS_BG};background-color: \${COLOR_TOOLS_BG};padding: 0; margin: 0;position: relative;height: 100%; width: 100%;overflow: hidden;}body:after {position: absolute; display: block; content:''; top: 10%; left: 10%; width: 80%; height: 80%; z-index: 1;background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><path fill="%23\${COLOR_TOOLS_FG_NOHASH}" d="M528 288h-92.1l46.1-46.1c30.1-30.1 8.8-81.9-33.9-81.9h-64V48c0-26.5-21.5-48-48-48h-96c-26.5 0-48 21.5-48 48v112h-64c-42.6 0-64.2 51.7-33.9 81.9l46.1 46.1H48c-26.5 0-48 21.5-48 48v128c0 26.5 21.5 48 48 48h480c26.5 0 48-21.5 48-48V336c0-26.5-21.5-48-48-48zm-400-80h112V48h96v160h112L288 368 128 208zm400 256H48V336h140.1l65.9 65.9c18.8 18.8 49.1 18.7 67.9 0l65.9-65.9H528v128zm-88-64c0-13.3 10.7-24 24-24s24 10.7 24 24-10.7 24-24 24-24-10.7-24-24z"/></svg>');background-repeat: no-repeat;background-position: center;}`)
-    .add(`/* ----Font---- */.x-tree-node,.x-grid3-row td, .x-grid3-summary-row td,.x-grid-empty,.ext-webkit .x-small-editor .x-form-field,.x-form-field,.x-btn button,.x-toolbar input,.x-toolbar .full-size-text,.ext-el-mask-msg div{font-size: \${FONT_SIZE};}/* --------------General layout-------------- */.x-border-layout-ct,.x-toolbar,ul.x-tab-strip-top {background-color: \${COLOR_TOOLS_BG};background-image: none;}#repository-wrapper {transform: translate(1px, -2px);}#repository-wrapper+.x-panel {transform: translate(-1px, -2px);}#properties .x-panel-tbar {transform: translateY(-3px);}/* --------Toolbars-------- */.x-toolbar, .x-panel-tbar .x-toolbar {padding: 0;}.x-toolbar.light {margin: 5px 0;}.x-toolbar .x-btn-over td,.x-toolbar .x-btn-menu-active td {background-image: none !important;background-color: \${COLOR_WORKSPACE_SHADE};transition: background-color 0.3s;}.x-toolbar .x-btn-over .x-btn-text,.x-toolbar .x-btn-menu-active .x-btn-text {color: \${COLOR_TOOLS_HIGH};}.x-toolbar .xtb-spacer {width: 16px;}.x-toolbar .x-btn-text {color: \${COLOR_TOOLS_FG};}.x-item-disabled * {color: \${COLOR_TOOLS_FG} !important;}.x-item-disabled>input {color: gray !important;}.x-toolbar.light .x-item-disabled {opacity: .2;}.x-btn-text-icon .x-btn-icon-small-left .x-btn-text {background-position: 4px center;padding-left: 24px;margin-right: 2px;text-transform: uppercase;}.x-toolbar .x-btn-mc em.x-btn-split {background-size: 11px;padding-right: 8px;}.x-toolbar div.xtb-text {padding: 2px;}#toolbar .x-btn-text {display: block;min-width: 40px;height: 38px;padding: 24px 0 2px 0;overflow: hidden;font-size: 11px;text-transform: uppercase;white-space: normal;background-position: top 3px center;background-repeat: no-repeat;background-size: 20px 20px;}#loginbutton .x-btn-text {padding: 0;word-break: break-all;text-align: left;}#loginbutton .x-btn-mc em.x-btn-split {padding-right: 16px;}#tools-wrapper .x-panel-bwrap,#tools-wrapper .x-panel-body,#tools-wrapper .x-panel-tbar,#custom-properties-toolbar {overflow: visible;}#custom-properties-toolbar .x-btn {box-shadow: 0px -2px 0px 0px \${COLOR_TOOLS_BG};padding: 0 0 3px 0;}#custom-properties-toolbar .x-btn.x-btn-over {background-color: \${COLOR_WORKSPACE_SHADE};box-shadow: 0px -2px 0px 0px \${COLOR_WORKSPACE_SHADE};}#properties .x-btn-text {font-size: 11px;transform: translateY(1px);}#addressbar .x-panel-body {background-color: \${COLOR_TOOLS_BG};}#addressbar .x-btn {height: 100%;}#addressbar .x-btn-mc em {padding: 0 3px;}#addressbar .x-btn-mc em.x-btn-split,#addressbar.x-btn-over .x-btn-mc em.x-btn-split {background-image: none !important;}#addressbar .x-btn:last-child em {padding-left: 1px;}#environment {display: block;height: 100%;line-height: 32px;padding: 0 3px 0 6px;background-color: \${COLOR_WORKSPACE_BG};color: \${COLOR_TOOLS_BG};text-transform: uppercase;}/* -----Menus----- */.x-menu {background-color: \${COLOR_TOOLS_BG};background-image: none !important;}.x-menu-detached {z-index: 20001 !important;}.x-menu-list {padding: 0;}.x-menu-list-item {font-size: 11px;text-transform: uppercase;margin: 0;padding: 1px 3px;}.x-menu.light,.invert-menu-bg .x-menu {background-color: \${COLOR_WORKSPACE_SHADE};}.x-menu.bookmarks img {transform: translateY(-1px);}.x-menu.bookmarks:not(.x-menu-detached) .x-menu-list-item {text-transform: none;font-size: \${FONT_SIZE};}.x-menu a.x-menu-item {color: \${COLOR_TOOLS_FG};}.x-menu.light a.x-menu-item,.invert-menu-bg .x-menu a.x-menu-item {color: \${COLOR_WORKSPACE_FG};}.x-menu.light .x-item-disabled *,.invert-menu-bg .x-menu .x-item-disabled * {color: \${COLOR_TOOLS_BG} !important;}.x-menu-item-active {margin: 0;padding: 1px 4px;}.x-menu-item-active,.x-menu-item-active a.x-menu-item {border: none;background-image: none;background-color: \${COLOR_WORKSPACE_SHADE};color: \${COLOR_TOOLS_HIGH};transition: background-color 0.3s;}.x-menu.light .x-menu-item-active,.x-menu.light .x-menu-item-active a.x-menu-item,.invert-menu-bg .x-menu .x-menu-item-active,.invert-menu-bg .x-menu .x-menu-item-active a.x-menu-item {background-color: \${COLOR_WORKSPACE_BG};color: \${COLOR_TOOLS_HIGH};}.x-menu-item-icon {background-repeat: no-repeat;}.x-menu.bookmarks.light .x-menu-item-icon,.invert-menu-bg .x-menu.bookmarks .x-menu-item-icon {border: 1px Solid \${COLOR_WORKSPACE_BG};}.x-menu .x-menu-sep {background-color: \${COLOR_WORKSPACE_SHADE};opacity: .5;}.x-menu.light .x-menu-sep,.invert-menu-bg .x-menu .x-menu-sep {background-color: \${COLOR_TOOLS_BG};}.x-menu-item-arrow {background-size: 6px;background-position: top 3px right 3px;}.x-menu-sep-li+.x-menu-sep-li,.hide-disabled .x-menu-list-item.x-item-disabled,.hide-disabled .x-menu-sep-li+.x-item-disabled+.x-menu-sep-li,.hide-disabled .x-menu-sep-li+.x-item-disabled+.x-item-disabled+.x-menu-sep-li {display: none;}.x-menu .x-menu-scroller {height: 9px;line-height: 9px;background-repeat: no-repeat;background-size: 10px;background-position: center;}.x-menu-scroller.x-menu-item-active {background-color: transparent !important;}/* ----Tabs---- */.x-tab-strip-top .x-tab-right,.x-tab-strip-top .x-tab-left,.x-tab-strip-top .x-tab-strip-inner {background-image: none;}ul.x-tab-strip li {background-color: \${COLOR_WORKSPACE_SHADE};border-radius: 3px 3px 0 0;margin: 0 2px 0 0;transform: translateY(-1px);box-shadow: 0 1px 0 0 \${COLOR_WORKSPACE_SHADE};font-size: 11px;font-weight: normal;}#repository-wrapper ul.x-tab-strip li:first-child {margin-left: 2px;}ul.x-tab-strip li.x-tab-strip-active {background-color: \${COLOR_WORKSPACE_BG};box-shadow: 0 1px 0 0 \${COLOR_WORKSPACE_BG};}.x-tab-panel-header, .x-tab-panel-footer {background-color: \${COLOR_WORKSPACE_BG};}.x-tab-strip span.x-tab-strip-text,.x-tab-strip-active span.x-tab-strip-text {font-weight: normal;color: \${COLOR_TOOLS_HIGH};}/*.x-tab-panel-header {padding: 0;}.x-tab-panel-body {padding: 3px 0 0 3px;}*/.x-tab-strip span.x-tab-strip-text {padding: 4px 10px 3px 10px;}.x-tab-strip-top .x-tab-strip-active .x-tab-right span.x-tab-strip-text {padding-bottom: 4px;}/* ------------Tools panels------------ */#tools-wrapper .x-panel-header,#repository .x-panel-header {display: none;}.x-panel-bbar,.x-panel-bbar .x-toolbar {background-color: \${COLOR_WORKSPACE_SHADE};}/* ---------------Repository tree--------------- */.x-tree-node a span,.x-tree-node-anchor span {margin-left: 1px;padding: 1px 4px 1px 2px;border-radius: 3px;}.x-tree-node-el.drag>.x-tree-node-anchor:after,.x-tree-node-el.sorted>.x-tree-node-anchor:after {display: inline-block;content: '';width: 1em; height: 1em;transform: translate(0, 2px);}#repository .x-form-field-wrap .x-form-twin-triggers .x-form-trigger {transform: translate(2px, 5px);}#repository>.x-panel-bwrap>.x-panel-body {overflow: hidden auto !important;}/* ----------Home panel---------- */.homepanel .x-panel-body {background-size: 300px;padding: 64px 0 10px 20px;transition: background-position 700ms, background-size 700ms;}.homepanel .x-panel-body.loaded {background-position: top 20px left 20px;background-size: 150px;}.homepanel #navmenu>.logoutButton {display: none;}.homepanel #navmenu {font-size: \${FONT_SIZE};line-height: 20px;height: 100%;overflow-y: scroll;overflow-x: hidden;}.homepanel #navmenu>li {display: table-row;}.homepanel #navmenu>li>a {display: table-cell;white-space: nowrap;padding-right: 20px;width: 60px;color: \${COLOR_TOOLS_BG};font-weight: bold;}.homepanel #navmenu>li>ul {display: table-cell;padding-bottom: 10px;}.homepanel #navmenu>li>ul>li {display: inline-block;margin-right: 5px;}.homepanel #navmenu a {text-decoration: none;}.homepanel #navmenu>li>ul>li a {color: \${COLOR_WORKSPACE_FG};padding: 1px 2px;}.homepanel #navmenu>li>ul>li a:hover {color: \${COLOR_TOOLS_HIGH};background-color: \${COLOR_WORKSPACE_SHADE};border-radius: 3px;transition: background-color 0.3s;}.homepanel #navmenu .logLink {text-transform: capitalize;}.homepanel #navmenu .logLink em {color: \${COLOR_TOOLS_HIGH};}#crxb-version {position: absolute;top: 10px;right: 20px;color: \${COLOR_WORKSPACE_SHADE};font-weight: bold;font-size: .9em;}/* ----------------Properties panel---------------- */.x-tree-node .x-tree-selected,.x-grid3-row-selected,.x-grid3-cell-selected {background-color: \${COLOR_WORKSPACE_SHADE} !important;}/* ------------Search panel------------ */#repository-wrapper .x-toolbar .full-size-text {color: \${COLOR_TOOLS_HIGH};}#repository-wrapper .x-toolbar .full-size-text em {cursor: pointer;}#search-results .x-grid3-row {border: none;}#search-results .x-grid3-cell-inner {padding: 2px 3px 3px 3px;}#search-results .x-grid3-header {display: none;}#search-results span.x-tree-node-icon {display: inline-block;width: 16px;margin-right: 5px;background-position: center;background-repeat: no-repeat;}/* --------------Dialog windows------------- */.x-tab-panel .x-panel-tbar .x-toolbar,.x-window .x-toolbar,.x-window .x-toolbar .x-btn {background-color: \${COLOR_WORKSPACE_BG};}.x-tab-panel .x-toolbar button,.x-window .x-toolbar .x-btn button {color: \${COLOR_TOOLS_HIGH};padding: 5px;box-sizing: content-box;background-size: 16px;}.x-window .x-panel-tbar,.x-tab-panel .x-panel-tbar,#editors .x-panel-bbar {margin-top: 2px;}.x-window .x-toolbar .xtb-sep {display: none;}.x-window-body.x-border-layout-ct {background-color: \${COLOR_WORKSPACE_BG};}.x-window-tl .x-window-header {color: \${COLOR_TOOLS_FG};line-height: 26px;padding: 0 0 0 4px;text-transform: uppercase;font-weight: normal;}.x-window-tr, .x-window-tc, .x-window-tl {background-image: none;height: 26px;background-color: \${COLOR_TOOLS_BG};}.x-window-mr, .x-window-mc, .x-window-ml {background-image: none;background-color: \${COLOR_WORKSPACE_BG} !important;}.x-window-br, .x-window-bc, .x-window-bl {background-image: none;background-color: \${COLOR_WORKSPACE_BG};}.x-window-dlg .x-window-body {padding: 20px 10px 10px 10px;}.x-window-footer {padding-top: 10px;}.x-window .x-btn {background-color: \${COLOR_TOOLS_BG};padding: 2px 4px 4px 4px;}.x-window .x-toolbar .x-btn {padding: 0;}.x-window .x-btn td {background-image: none !important;}.x-window .x-btn button {color: \${COLOR_TOOLS_FG};}.x-window .x-btn.x-btn-over button {color: \${COLOR_TOOLS_HIGH};}.x-window .x-btn.x-btn-over {background-color: \${COLOR_WORKSPACE_SHADE};}.x-window-header .x-tool-close {margin-top: 5px;}.x-window-dlg em {font-weight: normal;color: \${COLOR_TOOLS_HIGH};}.x-window .dialog-section {display:block;margin: 16px 0;font-weight: bold;color: \${COLOR_TOOLS_BG};}.x-window .dialog-section:first-child {margin-top: 0;}/* ------Inputs------ */#repository-path,#repository .x-form-text {padding: 3px 5px;border-radius: 0;background-image: none;}input[type="color"] {border: none;background-image: none;}.x-form-file+table tr:nth-child(1),.x-form-file+table tr:nth-child(3) {display: none;}.x-window-body>.x-panel.multifield:first-child {margin: 10px;}.x-panel.multifield .x-panel-body {padding: 0 0 5px 0 !important;}.x-panel.multifield .x-box-inner {width: auto !important;}.x-panel.multifield .x-btn.x-box-item {min-width: 40px;}.x-panel.multifield .x-btn.x-box-item tr:nth-child(1),.x-panel.multifield .x-btn.x-box-item tr:nth-child(3) {display: none;}.x-panel,.x-tab-panel-header,.x-tab-panel-footer,.x-panel-body,.x-tab-panel-body,ul.x-tab-strip-top,.x-panel-noborder .x-panel-tbar-noborder .x-toolbar,.x-panel-noborder .x-panel-bbar-noborder .x-toolbar,.x-trigger-wrap-focus .x-form-trigger,.x-window-mc,.x-window .x-toolbar,.x-menu,.x-menu-sep,#repository-path,#repository .x-form-text{border: none;}/* --------Progress-------- */.x-progress-wrap {border: none;}.x-progress-inner {background: \${COLOR_WORKSPACE_SHADE};}.x-progress-bar {background: \${COLOR_TOOLS_BG};border: none;}.x-progress-text {color: \${COLOR_TOOLS_FG};}/* --------Tooltips-------- */.x-tip, .x-tip div {background-image: none !important;background-color: \${COLOR_WORKSPACE_SHADE} !important;}.invert-menu-bg .x-tip, .invert-menu-bg .x-tip div {background-color: \${COLOR_WORKSPACE_BG} !important;}.x-tip .x-tip-body {font-size: \${FONT_SIZE};padding: 10px;word-break: break-word;}/* -----Masks----- */.ext-el-mask-msg,.x-mask-loading div,.ext-el-mask-msg div {border: none;background-color: \${COLOR_TOOLS_BG};color: \${COLOR_TOOLS_FG};}.x-mask-loading div {padding: 5px 10px 5px 38px;}.ext-el-mask-msg {background-image: none;padding: 7px;}.ext-el-mask {background-color: \${COLOR_WORKSPACE_SHADE};opacity: .7;}/* -------Shadows------- */.x-shadow {display: none !important;}.x-window {box-shadow: 0 0 4px 0 rgba(0, 0, 0, 0.5);}.x-menu-detached {box-shadow: 0 0 2px 0 rgba(0, 0, 0, 0.5);}/* ----------Scrollbars---------- */* {scrollbar-width: auto;scrollbar-color: \${COLOR_WORKSPACE_SHADE} \${COLOR_WORKSPACE_BG};}*::-webkit-scrollbar {width: 10px;height: 10px;}*::-webkit-scrollbar-track {background: \${COLOR_WORKSPACE_BG};}*::-webkit-scrollbar-thumb {background-color: \${COLOR_WORKSPACE_SHADE};border-radius: 2px;}`)
+    .add(`/* ----Font---- */.x-tree-node,.x-grid3-row td, .x-grid3-summary-row td,.x-grid-empty,.ext-webkit .x-small-editor .x-form-field,.x-form-field,.x-btn button,.x-toolbar input,.x-toolbar .full-size-text,.ext-el-mask-msg div{font-size: \${FONT_SIZE};}/* --------------General layout-------------- */.x-border-layout-ct,.x-toolbar,ul.x-tab-strip-top {background-color: \${COLOR_TOOLS_BG};background-image: none;}#repository-wrapper {transform: translate(1px, -2px);}#repository-wrapper+.x-panel {transform: translate(-1px, -2px);}#properties .x-panel-tbar {transform: translateY(-3px);}/* --------Toolbars-------- */.x-toolbar, .x-panel-tbar .x-toolbar {padding: 0;}.x-toolbar.light {margin: 5px 0;}.x-toolbar .x-btn-over td,.x-toolbar .x-btn-menu-active td {background-image: none !important;background-color: \${COLOR_WORKSPACE_SHADE};transition: background-color 0.3s;}.x-toolbar .x-btn-over .x-btn-text,.x-toolbar .x-btn-menu-active .x-btn-text {color: \${COLOR_TOOLS_HIGH};}.x-toolbar .xtb-spacer {width: 16px;}.x-toolbar .x-btn-text {color: \${COLOR_TOOLS_FG};}.x-item-disabled * {color: \${COLOR_TOOLS_FG} !important;}.x-item-disabled>input {color: gray !important;}.x-toolbar.light .x-item-disabled {opacity: .2;}.x-btn-text-icon .x-btn-icon-small-left .x-btn-text {background-position: 4px center;padding-left: 24px;margin-right: 2px;text-transform: uppercase;}.x-toolbar .x-btn-mc em.x-btn-split {background-size: 11px;padding-right: 8px;}.x-toolbar div.xtb-text {padding: 2px;}#toolbar .x-btn-text {display: block;min-width: 40px;height: 38px;padding: 24px 0 2px 0;overflow: hidden;font-size: 11px;text-transform: uppercase;white-space: normal;background-position: top 3px center;background-repeat: no-repeat;background-size: 20px 20px;}#loginbutton .x-btn-text {padding: 0;word-break: break-all;text-align: left;}#loginbutton .x-btn-mc em.x-btn-split {padding-right: 16px;}#tools-wrapper .x-panel-bwrap,#tools-wrapper .x-panel-body,#tools-wrapper .x-panel-tbar,#custom-properties-toolbar {overflow: visible;}#custom-properties-toolbar .x-btn {box-shadow: 0px -2px 0px 0px \${COLOR_TOOLS_BG};padding: 0 0 3px 0;}#custom-properties-toolbar .x-btn.x-btn-over {background-color: \${COLOR_WORKSPACE_SHADE};box-shadow: 0px -2px 0px 0px \${COLOR_WORKSPACE_SHADE};}#properties .x-btn-text {font-size: 11px;transform: translateY(1px);}#addressbar .x-panel-body {background-color: \${COLOR_TOOLS_BG};}#addressbar .x-btn {height: 100%;}#addressbar .x-btn-mc em {padding: 0 3px;}#addressbar .x-btn-mc em.x-btn-split,#addressbar.x-btn-over .x-btn-mc em.x-btn-split {background-image: none !important;}#addressbar .x-btn:last-child em {padding-left: 1px;}#environment {display: block;height: 100%;line-height: 32px;padding: 0 3px 0 6px;background-color: \${COLOR_WORKSPACE_BG};color: \${COLOR_TOOLS_BG};text-transform: uppercase;}/* -----Menus----- */.x-menu {background-color: \${COLOR_TOOLS_BG};background-image: none !important;}.x-menu-detached {z-index: 20001 !important;}.x-menu-list {padding: 0;}.x-menu-list-item {font-size: 11px;text-transform: uppercase;margin: 0;padding: 1px 3px;}.x-menu.light,.invert-menu-bg .x-menu {background-color: \${COLOR_WORKSPACE_SHADE};}.x-menu.bookmarks img {transform: translateY(-1px);}.x-menu.bookmarks:not(.x-menu-detached) .x-menu-list-item {text-transform: none;font-size: \${FONT_SIZE};}.x-menu a.x-menu-item {color: \${COLOR_TOOLS_FG};}.x-menu.light a.x-menu-item,.invert-menu-bg .x-menu a.x-menu-item {color: \${COLOR_WORKSPACE_FG};}.x-menu.light .x-item-disabled *,.invert-menu-bg .x-menu .x-item-disabled * {color: \${COLOR_TOOLS_BG} !important;}.x-menu-item-active {margin: 0;padding: 1px 4px;}.x-menu-item-active,.x-menu-item-active a.x-menu-item {border: none;background-image: none;background-color: \${COLOR_WORKSPACE_SHADE};color: \${COLOR_TOOLS_HIGH};transition: background-color 0.3s;}.x-menu.light .x-menu-item-active,.x-menu.light .x-menu-item-active a.x-menu-item,.invert-menu-bg .x-menu .x-menu-item-active,.invert-menu-bg .x-menu .x-menu-item-active a.x-menu-item {background-color: \${COLOR_WORKSPACE_BG};color: \${COLOR_TOOLS_HIGH};}.x-menu-item-icon {background-repeat: no-repeat;}.x-menu.bookmarks.light .x-menu-item-icon,.invert-menu-bg .x-menu.bookmarks .x-menu-item-icon {border: 1px Solid \${COLOR_WORKSPACE_BG};}.x-menu .x-menu-sep {background-color: \${COLOR_WORKSPACE_SHADE};opacity: .5;}.x-menu.light .x-menu-sep,.invert-menu-bg .x-menu .x-menu-sep {background-color: \${COLOR_TOOLS_BG};}.x-menu-item-arrow {background-size: 6px;background-position: top 3px right 3px;}.x-menu-sep-li+.x-menu-sep-li,.hide-disabled .x-menu-list-item.x-item-disabled,.hide-disabled .x-menu-sep-li+.x-item-disabled+.x-menu-sep-li,.hide-disabled .x-menu-sep-li+.x-item-disabled+.x-item-disabled+.x-menu-sep-li,.hide-disabled .x-item-disabled:first-child+.x-menu-sep-li,.hide-disabled .x-item-disabled:first-child+.x-item-disabled+.x-menu-sep-li,.hide-disabled .x-item-disabled:first-child+.x-item-disabled+.x-item-disabled+.x-menu-sep-li {display: none;}.x-menu .x-menu-scroller {height: 9px;line-height: 9px;background-repeat: no-repeat;background-size: 10px;background-position: center;}.x-menu-scroller.x-menu-item-active {background-color: transparent !important;}/* ----Tabs---- */.x-tab-strip-top .x-tab-right,.x-tab-strip-top .x-tab-left,.x-tab-strip-top .x-tab-strip-inner {background-image: none;}ul.x-tab-strip li {background-color: \${COLOR_WORKSPACE_SHADE};border-radius: 3px 3px 0 0;margin: 0 2px 0 0;transform: translateY(-1px);box-shadow: 0 1px 0 0 \${COLOR_WORKSPACE_SHADE};font-size: 11px;font-weight: normal;}#repository-wrapper ul.x-tab-strip li:first-child {margin-left: 2px;}ul.x-tab-strip li.x-tab-strip-active {background-color: \${COLOR_WORKSPACE_BG};box-shadow: 0 1px 0 0 \${COLOR_WORKSPACE_BG};}.x-tab-panel-header, .x-tab-panel-footer {background-color: \${COLOR_WORKSPACE_BG};}.x-tab-strip span.x-tab-strip-text,.x-tab-strip-active span.x-tab-strip-text {font-weight: normal;color: \${COLOR_TOOLS_HIGH};}/*.x-tab-panel-header {padding: 0;}.x-tab-panel-body {padding: 3px 0 0 3px;}*/.x-tab-strip span.x-tab-strip-text {padding: 4px 10px 3px 10px;}.x-tab-strip-top .x-tab-strip-active .x-tab-right span.x-tab-strip-text {padding-bottom: 4px;}/* ------------Tools panels------------ */#tools-wrapper .x-panel-header,#repository .x-panel-header {display: none;}.x-panel-bbar,.x-panel-bbar .x-toolbar {background-color: \${COLOR_WORKSPACE_SHADE};}/* ---------------Repository tree--------------- */.x-tree-node a span,.x-tree-node-anchor span {margin-left: 1px;padding: 1px 4px 1px 2px;border-radius: 3px;}.x-tree-node-el.drag>.x-tree-node-anchor:after,.x-tree-node-el.sorted>.x-tree-node-anchor:after {display: inline-block;content: '';width: 1em; height: 1em;transform: translate(0, 2px);}#repository .x-form-field-wrap .x-form-twin-triggers .x-form-trigger {transform: translate(2px, 5px);}#repository>.x-panel-bwrap>.x-panel-body {overflow: hidden auto !important;}/* ----------Home panel---------- */.homepanel .x-panel-body {background-size: 300px;padding: 64px 0 10px 20px;transition: background-position 700ms, background-size 700ms;}.homepanel .x-panel-body.loaded {background-position: top 20px left 20px;background-size: 150px;}.homepanel #navmenu>.logoutButton {display: none;}.homepanel #navmenu {font-size: \${FONT_SIZE};line-height: 20px;height: 100%;overflow-y: scroll;overflow-x: hidden;}.homepanel #navmenu>li {display: table-row;}.homepanel #navmenu>li>a {display: table-cell;white-space: nowrap;padding-right: 20px;width: 60px;color: \${COLOR_TOOLS_BG};font-weight: bold;}.homepanel #navmenu>li>ul {display: table-cell;padding-bottom: 10px;}.homepanel #navmenu>li>ul>li {display: inline-block;margin-right: 5px;}.homepanel #navmenu a {text-decoration: none;}.homepanel #navmenu>li>ul>li a {color: \${COLOR_WORKSPACE_FG};padding: 1px 2px;}.homepanel #navmenu>li>ul>li a:hover {color: \${COLOR_TOOLS_HIGH};background-color: \${COLOR_WORKSPACE_SHADE};border-radius: 3px;transition: background-color 0.3s;}.homepanel #navmenu .logLink {text-transform: capitalize;}.homepanel #navmenu .logLink em {color: \${COLOR_TOOLS_HIGH};}#crxb-version {position: absolute;top: 10px;right: 20px;color: \${COLOR_WORKSPACE_SHADE};font-weight: bold;font-size: .9em;}/* ----------------Properties panel---------------- */.x-tree-node .x-tree-selected,.x-grid3-row-selected,.x-grid3-cell-selected {background-color: \${COLOR_WORKSPACE_SHADE} !important;}/* ------------Search panel------------ */#repository-wrapper .x-toolbar .full-size-text {color: \${COLOR_TOOLS_HIGH};}#repository-wrapper .x-toolbar .full-size-text em {cursor: pointer;}#search-results .x-grid3-row {border: none;}#search-results .x-grid3-cell-inner {padding: 2px 3px 3px 3px;}#search-results .x-grid3-header {display: none;}#search-results span.x-tree-node-icon {display: inline-block;width: 16px;margin-right: 5px;background-position: center;background-repeat: no-repeat;}/* --------------Dialog windows------------- */.x-tab-panel .x-panel-tbar .x-toolbar,.x-window .x-toolbar,.x-window .x-toolbar .x-btn {background-color: \${COLOR_WORKSPACE_BG};}.x-tab-panel .x-toolbar button,.x-window .x-toolbar .x-btn button {color: \${COLOR_TOOLS_HIGH};padding: 5px;box-sizing: content-box;background-size: 16px;}.x-window .x-panel-tbar,.x-tab-panel .x-panel-tbar,#editors .x-panel-bbar {margin-top: 2px;}.x-window .x-toolbar .xtb-sep {display: none;}.x-window-body.x-border-layout-ct {background-color: \${COLOR_WORKSPACE_BG};}.x-window-tl .x-window-header {color: \${COLOR_TOOLS_FG};line-height: 26px;padding: 0 0 0 4px;text-transform: uppercase;font-weight: normal;}.x-window-tr, .x-window-tc, .x-window-tl {background-image: none;height: 26px;background-color: \${COLOR_TOOLS_BG};}.x-window-mr, .x-window-mc, .x-window-ml {background-image: none;background-color: \${COLOR_WORKSPACE_BG} !important;}.x-window-br, .x-window-bc, .x-window-bl {background-image: none;background-color: \${COLOR_WORKSPACE_BG};}.x-window-dlg .x-window-body {padding: 20px 10px 10px 10px;}.x-window-footer {padding-top: 10px;}.x-window .x-btn {background-color: \${COLOR_TOOLS_BG};padding: 2px 4px 4px 4px;}.x-window .x-toolbar .x-btn {padding: 0;}.x-window .x-btn td {background-image: none !important;}.x-window .x-btn button {color: \${COLOR_TOOLS_FG};}.x-window .x-btn.x-btn-over button {color: \${COLOR_TOOLS_HIGH};}.x-window .x-btn.x-btn-over {background-color: \${COLOR_WORKSPACE_SHADE};}.x-window-header .x-tool-close {margin-top: 5px;}.x-window-dlg em {font-weight: normal;color: \${COLOR_TOOLS_HIGH};}.x-window .dialog-section {display:block;margin: 16px 0;font-weight: bold;color: \${COLOR_TOOLS_BG};}.x-window .dialog-section:first-child {margin-top: 0;}/* ------Inputs------ */#repository-path,#repository .x-form-text {padding: 3px 5px;border-radius: 0;background-image: none;}input[type="color"] {border: none;background-image: none;}.x-form-file+table tr:nth-child(1),.x-form-file+table tr:nth-child(3) {display: none;}.x-window-body>.x-panel.multifield:first-child {margin: 10px;}.x-panel.multifield .x-panel-body {padding: 0 0 5px 0 !important;}.x-panel.multifield .x-box-inner {width: auto !important;}.x-panel.multifield .x-btn.x-box-item {min-width: 40px;}.x-panel.multifield .x-btn.x-box-item tr:nth-child(1),.x-panel.multifield .x-btn.x-box-item tr:nth-child(3) {display: none;}.x-panel,.x-tab-panel-header,.x-tab-panel-footer,.x-panel-body,.x-tab-panel-body,ul.x-tab-strip-top,.x-panel-noborder .x-panel-tbar-noborder .x-toolbar,.x-panel-noborder .x-panel-bbar-noborder .x-toolbar,.x-trigger-wrap-focus .x-form-trigger,.x-window-mc,.x-window .x-toolbar,.x-menu,.x-menu-sep,#repository-path,#repository .x-form-text{border: none;}/* --------Progress-------- */.x-progress-wrap {border: none;}.x-progress-inner {background: \${COLOR_WORKSPACE_SHADE};}.x-progress-bar {background: \${COLOR_TOOLS_BG};border: none;}.x-progress-text {color: \${COLOR_TOOLS_FG};}/* --------Tooltips-------- */.x-tip, .x-tip div {background-image: none !important;background-color: \${COLOR_WORKSPACE_SHADE} !important;}.invert-menu-bg .x-tip, .invert-menu-bg .x-tip div {background-color: \${COLOR_WORKSPACE_BG} !important;}.x-tip .x-tip-body {font-size: \${FONT_SIZE};padding: 10px;word-break: break-word;}/* -----Masks----- */.ext-el-mask-msg,.x-mask-loading div,.ext-el-mask-msg div {border: none;background-color: \${COLOR_TOOLS_BG};color: \${COLOR_TOOLS_FG};}.x-mask-loading div {padding: 5px 10px 5px 38px;}.ext-el-mask-msg {background-image: none;padding: 7px;}.ext-el-mask {background-color: \${COLOR_WORKSPACE_SHADE};opacity: .7;}/* -------Shadows------- */.x-shadow {display: none !important;}.x-window {box-shadow: 0 0 4px 0 rgba(0, 0, 0, 0.5);}.x-menu-detached {box-shadow: 0 0 2px 0 rgba(0, 0, 0, 0.5);}/* ----------Scrollbars---------- */* {scrollbar-width: auto;scrollbar-color: \${COLOR_WORKSPACE_SHADE} \${COLOR_WORKSPACE_BG};}*::-webkit-scrollbar {width: 10px;height: 10px;}*::-webkit-scrollbar-track {background: \${COLOR_WORKSPACE_BG};}*::-webkit-scrollbar-thumb {background-color: \${COLOR_WORKSPACE_SHADE};border-radius: 2px;}`)
     .add(`/* ----------Tree icons---------- */.x-tree-lines .x-tree-elbow,.x-tree-lines .x-tree-elbow-line {background-image: none;}.x-tree-lines .x-tree-elbow-plus,.x-tree-lines .x-tree-elbow-end-plus {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="%23\${COLOR_TOOLS_BG_NOHASH}" shape-rendering="crispEdges" d="M352 240v32c0 6.6-5.4 12-12 12h-88v88c0 6.6-5.4 12-12 12h-32c-6.6 0-12-5.4-12-12v-88h-88c-6.6 0-12-5.4-12-12v-32c0-6.6 5.4-12 12-12h88v-88c0-6.6 5.4-12 12-12h32c6.6 0 12 5.4 12 12v88h88c6.6 0 12 5.4 12 12zm96-160v352c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V80c0-26.5 21.5-48 48-48h352c26.5 0 48 21.5 48 48zm-48 346V86c0-3.3-2.7-6-6-6H54c-3.3 0-6 2.7-6 6v340c0 3.3 2.7 6 6 6h340c3.3 0 6-2.7 6-6z"></path></svg>');}.x-tree-lines .x-tree-elbow-minus,.x-tree-lines .x-tree-elbow-end-minus {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="%23\${COLOR_TOOLS_BG_NOHASH}" shape-rendering="crispEdges" d="M108 284c-6.6 0-12-5.4-12-12v-32c0-6.6 5.4-12 12-12h232c6.6 0 12 5.4 12 12v32c0 6.6-5.4 12-12 12H108zM448 80v352c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V80c0-26.5 21.5-48 48-48h352c26.5 0 48 21.5 48 48zm-48 346V86c0-3.3-2.7-6-6-6H54c-3.3 0-6 2.7-6 6v340c0 3.3 2.7 6 6 6h340c3.3 0 6-2.7 6-6z"></path></svg>');}.x-tree-node-icon.folder,.x-tree-root-ct>.x-tree-node>.x-tree-node-el .x-tree-node-icon.unstructured {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="%23\${COLOR_TOOLS_BG_NOHASH}" d="M464 128H272l-64-64H48C21.49 64 0 85.49 0 112v288c0 26.51 21.49 48 48 48h416c26.51 0 48-21.49 48-48V176c0-26.51-21.49-48-48-48z"></path></svg>');background-size: 16px;}.x-tree-elbow-end-minus+.x-tree-node-icon.folder,.x-tree-elbow-minus+.x-tree-node-icon.folder,.x-tree-root-ct>.x-tree-node>.x-tree-node-el .x-tree-elbow-minus+.x-tree-node-icon.unstructured,.x-tree-root-ct>.x-tree-node>.x-tree-node-el .x-tree-elbow-end-minus+.x-tree-node-icon.unstructured {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><path fill="%23\${COLOR_TOOLS_BG_NOHASH}" d="M572.694 292.093L500.27 416.248A63.997 63.997 0 0 1 444.989 448H45.025c-18.523 0-30.064-20.093-20.731-36.093l72.424-124.155A64 64 0 0 1 152 256h399.964c18.523 0 30.064 20.093 20.73 36.093zM152 224h328v-48c0-26.51-21.49-48-48-48H272l-64-64H48C21.49 64 0 85.49 0 112v278.046l69.077-118.418C86.214 242.25 117.989 224 152 224z"></path></svg>');}.x-tree-node-icon.unstructured {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="%23\${COLOR_TOOLS_BG_NOHASH}" d="M488.6 250.2L392 214V105.5c0-15-9.3-28.4-23.4-33.7l-100-37.5c-8.1-3.1-17.1-3.1-25.3 0l-100 37.5c-14.1 5.3-23.4 18.7-23.4 33.7V214l-96.6 36.2C9.3 255.5 0 268.9 0 283.9V394c0 13.6 7.7 26.1 19.9 32.2l100 50c10.1 5.1 22.1 5.1 32.2 0l103.9-52 103.9 52c10.1 5.1 22.1 5.1 32.2 0l100-50c12.2-6.1 19.9-18.6 19.9-32.2V283.9c0-15-9.3-28.4-23.4-33.7zM358 214.8l-85 31.9v-68.2l85-37v73.3zM154 104.1l102-38.2 102 38.2v.6l-102 41.4-102-41.4v-.6zm84 291.1l-85 42.5v-79.1l85-38.8v75.4zm0-112l-102 41.4-102-41.4v-.6l102-38.2 102 38.2v.6zm240 112l-85 42.5v-79.1l85-38.8v75.4zm0-112l-102 41.4-102-41.4v-.6l102-38.2 102 38.2v.6z"></path></svg>');background-size: 15px;}.x-tree-node-icon.page {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path fill="%23\${COLOR_TOOLS_BG_NOHASH}" shape-rendering="crispEdges" d="M224 136V0H24C10.7 0 0 10.7 0 24v464c0 13.3 10.7 24 24 24h336c13.3 0 24-10.7 24-24V160H248c-13.2 0-24-10.8-24-24zm64 236c0 6.6-5.4 12-12 12H108c-6.6 0-12-5.4-12-12v-8c0-6.6 5.4-12 12-12h168c6.6 0 12 5.4 12 12v8zm0-64c0 6.6-5.4 12-12 12H108c-6.6 0-12-5.4-12-12v-8c0-6.6 5.4-12 12-12h168c6.6 0 12 5.4 12 12v8zm0-72v8c0 6.6-5.4 12-12 12H108c-6.6 0-12-5.4-12-12v-8c0-6.6 5.4-12 12-12h168c6.6 0 12 5.4 12 12zm96-114.1v6.1H256V0h6.1c6.4 0 12.5 2.5 17 7l97.9 98c4.5 4.5 7 10.6 7 16.9z"></path></svg>');opacity: .7;background-size: 12px;}.x-tree-node-icon.file {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path fill="%23\${COLOR_TOOLS_BG_NOHASH}" shape-rendering="crispEdges" d="M224 136V0H24C10.7 0 0 10.7 0 24v464c0 13.3 10.7 24 24 24h336c13.3 0 24-10.7 24-24V160H248c-13.2 0-24-10.8-24-24zm160-14.1v6.1H256V0h6.1c6.4 0 12.5 2.5 17 7l97.9 98c4.5 4.5 7 10.6 7 16.9z"></path></svg>');opacity: .7;background-size: 12px;}.x-tree-node-icon.dialog {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="%23\${COLOR_TOOLS_BG_NOHASH}" shape-rendering="crispEdges" d="M464 32H48C21.5 32 0 53.5 0 80v352c0 26.5 21.5 48 48 48h416c26.5 0 48-21.5 48-48V80c0-26.5-21.5-48-48-48zm0 394c0 3.3-2.7 6-6 6H54c-3.3 0-6-2.7-6-6V192h416v234z"></path></svg>');opacity: .7;background-size: 13px;}.x-tree-lines .x-tree-elbow-plus,.x-tree-lines .x-tree-elbow-end-plus,.x-tree-lines .x-tree-elbow-minus,.x-tree-lines .x-tree-elbow-end-minus {background-size: 11px;background-position: center;transform: translateX(-2px);}/* --------------Window buttons-------------- */.x-form-field-wrap .x-form-clear-trigger,.x-tool.x-tool-close {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 352 512"><path fill="%23\${COLOR_TOOLS_FG_NOHASH}" d="M242.72 256l100.07-100.07c12.28-12.28 12.28-32.19 0-44.48l-22.24-22.24c-12.28-12.28-32.19-12.28-44.48 0L176 189.28 75.93 89.21c-12.28-12.28-32.19-12.28-44.48 0L9.21 111.45c-12.28 12.28-12.28 32.19 0 44.48L109.28 256 9.21 356.07c-12.28 12.28-12.28 32.19 0 44.48l22.24 22.24c12.28 12.28 32.2 12.28 44.48 0L176 322.72l100.07 100.07c12.28 12.28 32.2 12.28 44.48 0l22.24-22.24c12.28-12.28 12.28-32.19 0-44.48L242.72 256z"></path></svg>');background-position: 0 0;background-size: 12px;}.x-tool.x-tool-close.x-tool-close-over {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 352 512"><path fill="%23\${COLOR_TOOLS_HIGH_NOHASH}" d="M242.72 256l100.07-100.07c12.28-12.28 12.28-32.19 0-44.48l-22.24-22.24c-12.28-12.28-32.19-12.28-44.48 0L176 189.28 75.93 89.21c-12.28-12.28-32.19-12.28-44.48 0L9.21 111.45c-12.28 12.28-12.28 32.19 0 44.48L109.28 256 9.21 356.07c-12.28 12.28-12.28 32.19 0 44.48l22.24 22.24c12.28 12.28 32.2 12.28 44.48 0L176 322.72l100.07 100.07c12.28 12.28 32.2 12.28 44.48 0l22.24-22.24c12.28-12.28 12.28-32.19 0-44.48L242.72 256z"></path></svg>');}/* ------------Window icons------------ */.x-window-dlg .ext-mb-question {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="%23\${COLOR_TOOLS_BG_NOHASH}" d="M504 256c0 136.997-111.043 248-248 248S8 392.997 8 256C8 119.083 119.043 8 256 8s248 111.083 248 248zM262.655 90c-54.497 0-89.255 22.957-116.549 63.758-3.536 5.286-2.353 12.415 2.715 16.258l34.699 26.31c5.205 3.947 12.621 3.008 16.665-2.122 17.864-22.658 30.113-35.797 57.303-35.797 20.429 0 45.698 13.148 45.698 32.958 0 14.976-12.363 22.667-32.534 33.976C247.128 238.528 216 254.941 216 296v4c0 6.627 5.373 12 12 12h56c6.627 0 12-5.373 12-12v-1.333c0-28.462 83.186-29.647 83.186-106.667 0-58.002-60.165-102-116.531-102zM256 338c-25.365 0-46 20.635-46 46 0 25.364 20.635 46 46 46s46-20.636 46-46c0-25.365-20.635-46-46-46z"></path></svg>');}.x-form-invalid-icon,.x-window-dlg .ext-mb-error {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="%23E57C7C" d="M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8zm121.6 313.1c4.7 4.7 4.7 12.3 0 17L338 377.6c-4.7 4.7-12.3 4.7-17 0L256 312l-65.1 65.6c-4.7 4.7-12.3 4.7-17 0L134.4 338c-4.7-4.7-4.7-12.3 0-17l65.6-65-65.6-65.1c-4.7-4.7-4.7-12.3 0-17l39.6-39.6c4.7-4.7 12.3-4.7 17 0l65 65.7 65.1-65.6c4.7-4.7 12.3-4.7 17 0l39.6 39.6c4.7 4.7 4.7 12.3 0 17L312 256l65.6 65.1z"></path></svg>');}.x-window-dlg .ext-mb-info {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="%23\${COLOR_TOOLS_BG_NOHASH}" d="M256 8C119.043 8 8 119.083 8 256c0 136.997 111.043 248 248 248s248-111.003 248-248C504 119.083 392.957 8 256 8zm0 110c23.196 0 42 18.804 42 42s-18.804 42-42 42-42-18.804-42-42 18.804-42 42-42zm56 254c0 6.627-5.373 12-12 12h-88c-6.627 0-12-5.373-12-12v-24c0-6.627 5.373-12 12-12h12v-64h-12c-6.627 0-12-5.373-12-12v-24c0-6.627 5.373-12 12-12h64c6.627 0 12 5.373 12 12v100h12c6.627 0 12 5.373 12 12v24z"></path></svg>');}/* -----------Menu arrows----------- */.x-toolbar .x-btn-mc em.x-btn-split,.x-menu .x-menu-scroller-bottom {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><path fill="%23\${COLOR_TOOLS_FG_NOHASH}" d="M31.3 192h257.3c17.8 0 26.7 21.5 14.1 34.1L174.1 354.8c-7.8 7.8-20.5 7.8-28.3 0L17.2 226.1C4.6 213.5 13.5 192 31.3 192z"></path></svg>') !important;background-repeat: no-repeat;}.x-toolbar .x-btn-over .x-btn-mc em.x-btn-split,.x-toolbar .x-btn-menu-active .x-btn-mc em.x-btn-split,.x-menu.light .x-menu-scroller-bottom {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 404.308 404.309"><path fill="%23\${COLOR_TOOLS_HIGH_NOHASH}" d="M0,101.08h404.308L202.151,303.229L0,101.08z"/></svg>') !important;}.x-menu .x-menu-scroller-top {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><path fill="%23\${COLOR_TOOLS_FG_NOHASH}" d="M288.662 352H31.338c-17.818 0-26.741-21.543-14.142-34.142l128.662-128.662c7.81-7.81 20.474-7.81 28.284 0l128.662 128.662c12.6 12.599 3.676 34.142-14.142 34.142z"></path></svg>');background-repeat: no-repeat;}.x-menu.light .x-menu-scroller-top {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><path fill="%23\${COLOR_TOOLS_HIGH_NOHASH}" d="M288.662 352H31.338c-17.818 0-26.741-21.543-14.142-34.142l128.662-128.662c7.81-7.81 20.474-7.81 28.284 0l128.662 128.662c12.6 12.599 3.676 34.142-14.142 34.142z"></path></svg>');}.x-menu-item-arrow {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 512"><path fill="%23\${COLOR_TOOLS_FG_NOHASH}" d="M0 384.662V127.338c0-17.818 21.543-26.741 34.142-14.142l128.662 128.662c7.81 7.81 7.81 20.474 0 28.284L34.142 398.804C21.543 411.404 0 402.48 0 384.662z"></path></svg>');}.x-menu.light .x-menu-item-arrow,.invert-menu-bg .x-menu .x-menu-item-arrow,.x-menu-item-active a.x-menu-item-arrow {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 512"><path fill="%23\${COLOR_TOOLS_BG_NOHASH}" d="M0 384.662V127.338c0-17.818 21.543-26.741 34.142-14.142l128.662 128.662c7.81 7.81 7.81 20.474 0 28.284L34.142 398.804C21.543 411.404 0 402.48 0 384.662z"></path></svg>');}.x-menu.light .x-menu-item-active a.x-menu-item-arrow {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 512"><path fill="%23\${COLOR_TOOLS_HIGH_NOHASH}" d="M0 384.662V127.338c0-17.818 21.543-26.741 34.142-14.142l128.662 128.662c7.81 7.81 7.81 20.474 0 28.284L34.142 398.804C21.543 411.404 0 402.48 0 384.662z"></path></svg>');}/* Loading spinner */.x-mask-loading div {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><g><path fill="%23\${COLOR_TOOLS_FG_NOHASH}" d="M10.625,64a5.375,5.375 0 1,0 10.75,0a5.375,5.375 0 1,0 -10.75,0M9.562,64a6.438,6.438 0 1,0 12.876,0a6.438,6.438 0 1,0 -12.876,0" transform="rotate(45 64 64)"/><path fill="%23\${COLOR_TOOLS_FG_NOHASH}" d="M7.937,64a8.063,8.063 0 1,0 16.126,0a8.063,8.063 0 1,0 -16.126,0" transform="rotate(90 64 64)"/><path fill="%23\${COLOR_TOOLS_FG_NOHASH}" d="M5.937,64a10.063,10.063 0 1,0 20.126,0a10.063,10.063 0 1,0 -20.126,0" transform="rotate(135 64 64)"/><path fill="%23\${COLOR_TOOLS_FG_NOHASH}" d="M5.25,64a10.75,10.75 0 1,0 21.5,0a10.75,10.75 0 1,0 -21.5,0" transform="rotate(180 64 64)"/><path fill="%23\${COLOR_TOOLS_FG_NOHASH}" d="M3.469,64a12.531,12.531 0 1,0 25.062,0a12.531,12.531 0 1,0 -25.062,0" transform="rotate(225 64 64)"/><path fill="%23\${COLOR_TOOLS_FG_NOHASH}" d="M1.656,64a14.344,14.344 0 1,0 28.688,0a14.344,14.344 0 1,0 -28.688,0" transform="rotate(270 64 64)"/><path fill="%23\${COLOR_TOOLS_FG_NOHASH}" d="M0,64a16,16 0 1,0 32,0a16,16 0 1,0 -32,0" transform="rotate(315 64 64)"/><animateTransform attributeName="transform" type="rotate" values="0 64 64;45 64 64;90 64 64;135 64 64;180 64 64;225 64 64;270 64 64;315 64 64" calcMode="discrete" dur="700ms" repeatCount="indefinite"></animateTransform></g></svg>');background-size: 24px 24px;background-position-y: center;}`)
     .add('splash', `html, body {height: 100%;position: relative;margin: 0;background-color: \${COLOR_WORKSPACE_BG};}#loading {position: absolute;top: 50%;left: 50%;transform: translate(-50%, -50%);width: 400px;height: 100px;}#loading,.homepanel .x-panel-body {background: no-repeat center url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4941 899"><path fill="%23\${COLOR_TOOLS_BG_NOHASH}" d="M2522 0l180 229 180 -229 311 0 -343 409 392 474 -311 0 -229 -278 -229 278 -637 0 -245 -311 -212 0 0 311 -262 0 0 -883 637 0c164,0 327,114 327,278 0,131 -82,213 -196,262l262 343 392 -458 -357 -425 341 0zm1314 205c-17,-34 -76,-8 -92,33 -16,41 6,79 52,102 46,23 111,13 149,-53 33,-58 27,-203 -144,-227 0,0 -1,0 -1,0 -224,-9 -333,154 -359,236 -8,25 -13,53 -12,84l-1 0c-18,0 -33,15 -33,33l0 298c0,18 15,33 33,33l79 0c18,0 33,-15 33,-33l0 -24c0,-18 -15,-33 -33,-33l-7 0c-18,0 -33,-15 -33,-33l0 -104c21,41 47,75 75,104 18,19 41,51 57,62l0 90c0,18 15,33 33,33l79 0c18,0 33,-15 33,-33l0 -24c0,-18 -15,-33 -33,-33l-7 0c-18,0 -32,-14 -33,-32l113 0 46 0 0 88c0,18 15,33 33,33l79 0c18,0 33,-15 33,-33l0 -24c0,-18 -15,-33 -33,-33l-7 0c-18,0 -32,-14 -33,-32l98 0c8,0 17,-6 19,-12 1,-3 0,-7 -3,-9l-40 -33 73 31c21,9 50,-25 33,-49 -15,-22 -34,-45 -51,-66 -1,-1 -2,-3 -2,-4 -5,-40 -39,-72 -81,-72 -1,0 -1,0 -2,0 -3,0 -6,-1 -8,-4 -18,-29 -69,-66 -112,-70 -28,-3 -66,13 -86,65 -2,4 -6,6 -10,5 -65,-13 -89,-135 -64,-206 17,-49 85,-103 131,-104 37,-1 55,18 71,44 13,21 10,57 -17,65 -24,8 -50,-9 -44,-27 4,-13 38,-13 26,-35zm111 323c18,0 32,15 32,32 0,18 -15,32 -32,32 -18,0 -32,-15 -32,-32 0,-18 14,-32 32,-32zm-3946 -85c-9,307 208,441 506,441 264,0 471,-105 542,-290l-304 0c-50,58 -128,94 -217,93 -196,0 -251,-139 -250,-247 1,-107 57,-264 249,-269 94,-2 195,59 245,117l275 0c-66,-186 -257,-288 -539,-288 -298,0 -498,134 -506,442zm1378 -83l294 0c49,0 131,-16 131,-82 0,-65 -82,-82 -131,-82l-294 0 0 163zm1962 -360l375 0c278,0 458,131 458,458 0,278 -180,441 -458,441l-376 0 1 -899zm898 0l670 0 0 98 -539 0 0 275 409 0 0 98 -409 0 0 313 572 0 0 98 -703 0 0 -883z"/></svg>');}#loading:after {display: inline-block;content: '';background: no-repeat center url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 16"><path fill="%23\${COLOR_TOOLS_BG_NOHASH}" fill-opacity=".42" d="M6.4 4.8A3.2 3.2 0 113.2 8a3.2 3.2 0 013.2-3.2zm12.8 0A3.2 3.2 0 1116 8a3.2 3.2 0 013.2-3.2zm12.8 0A3.2 3.2 0 1128.8 8 3.2 3.2 0 0132 4.8zm12.8 0A3.2 3.2 0 1141.6 8a3.2 3.2 0 013.2-3.2zm12.8 0A3.2 3.2 0 1154.4 8a3.2 3.2 0 013.2-3.2zm12.8 0A3.2 3.2 0 1167.2 8a3.2 3.2 0 013.2-3.2zm12.8 0A3.2 3.2 0 1180 8a3.2 3.2 0 013.2-3.2zm12.8 0A3.2 3.2 0 1192.8 8 3.2 3.2 0 0196 4.8zm12.8 0a3.2 3.2 0 11-3.2 3.2 3.2 3.2 0 013.2-3.2zm12.8 0a3.2 3.2 0 11-3.2 3.2 3.2 3.2 0 013.2-3.2z"/><g><path fill="%23\${COLOR_TOOLS_BG_NOHASH}" d="M-42.7 3.84A4.16 4.16 0 01-38.54 8a4.16 4.16 0 01-4.16 4.16A4.16 4.16 0 01-46.86 8a4.16 4.16 0 014.16-4.16zm12.8-.64A4.8 4.8 0 01-25.1 8a4.8 4.8 0 01-4.8 4.8A4.8 4.8 0 01-34.7 8a4.8 4.8 0 014.8-4.8zm12.8-.64A5.44 5.44 0 01-11.66 8a5.44 5.44 0 01-5.44 5.44A5.44 5.44 0 01-22.54 8a5.44 5.44 0 015.44-5.44z"/><animateTransform attributeName="transform" type="translate" values="23 0;36 0;49 0;62 0;74.5 0;87.5 0;100 0;113 0;125.5 0;138.5 0;151.5 0;164.5 0;178 0" calcMode="discrete" dur="1690ms" repeatCount="indefinite"/></g></svg>');width: 400px;height: 24px;transform: translate(0, 97px);}#history-form,#load-indicator {display: none;}`)
     .add(`.x-btn-text.action-access, .x-menu-item .action-access {background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="%23\${COLOR_TOOLS_FG_NOHASH}" d="M512 176.001C512 273.203 433.202 352 336 352c-11.22 0-22.19-1.062-32.827-3.069l-24.012 27.014A23.999 23.999 0 01261.223 384H224v40c0 13.255-10.745 24-24 24h-40v40c0 13.255-10.745 24-24 24H24c-13.255 0-24-10.745-24-24v-78.059c0-6.365 2.529-12.47 7.029-16.971l161.802-161.802C163.108 213.814 160 195.271 160 176 160 78.798 238.797.001 335.999 0 433.488-.001 512 78.511 512 176.001zM336 128c0 26.51 21.49 48 48 48s48-21.49 48-48-21.49-48-48-48-48 21.49-48 48z"/></svg>')!important;}`)
@@ -3721,6 +3469,302 @@ CRXB.tweaks.modifyDeleteAction = function() {
     });
 
 };
+
+CRXB.util.getDisplayAsMenu = function() {
+    const displayAsItems = [
+        {
+            text: 'JSON',
+            handler: () => {
+                const path = CRXB.util.getCurrent('path') || '/';
+                window.open( path + '.tidy.-1.json')
+            }
+        },
+        {
+            text: 'XML',
+            handler: () => window.open(CRXB.util.getCurrent('path') + '.xml')
+        }
+    ];
+    return new Ext.menu.Item({
+        text: 'Display as',
+        menu: new Ext.menu.Menu({
+            id: 'display_as',
+            cls: 'x-menu-detached',
+            items: displayAsItems
+        }),
+    });
+}
+
+
+
+CRXB.util.getDragActions = function() {
+    if (CRX.ide.AllowDragAction) {
+        return [CRX.ide.AllowDragAction, CRX.ide.LockDragAction];
+    }
+
+    CRX.ide.AllowDragAction = new Ext.Action({
+        text: 'Unlock for dragging',
+        handler: () => {
+            const node = CRXB.util.getCurrent('node');
+            node.draggable = true;
+            node.ui.elNode.classList.add('drag');
+        }
+    });
+    CRX.ide.AllowDragAction.checkActive = function() {
+        const currentNode = CRXB.util.getCurrent('node');
+        const allowDragging = CRXB.settings.get('allow-dragging')
+        const disabled = !currentNode
+            || currentNode.draggable
+            || allowDragging
+            || currentNode === Ext.getCmp(CRX.ide.TREE_ID).getRootNode();
+        this.setDisabled(disabled);
+    };
+
+    CRX.ide.LockDragAction = new Ext.Action({
+        text: 'Lock for dragging',
+        handler: (node) => {
+            if (!node || node.getXType && (node.getXType() === 'menuitem')) {
+                node = CRXB.util.getCurrent('node');
+            }
+            node.draggable = false;
+            node.ui.elNode.classList.remove('drag');
+        }
+    });
+    CRX.ide.LockDragAction.checkActive = function() {
+        const currentNode = CRXB.util.getCurrent('node');
+        const allowDragging = CRXB.settings.get('allow-dragging');
+        const disabled = !currentNode
+            || !currentNode.draggable
+            || allowDragging
+            || currentNode === Ext.getCmp(CRX.ide.TREE_ID).getRootNode();
+        this.setDisabled(disabled);
+    };
+
+    return [CRX.ide.AllowDragAction, CRX.ide.LockDragAction];
+};
+
+
+CRXB.util.getOpenPageMenu = function() {
+
+    if (CRX.ide.OpenPageActions) {
+        return CRX.ide.OpenPageActions;
+    }
+
+    CRX.ide.OpenPageViewAction = new Ext.Action({
+        text: 'In preview mode',
+        handler: () => {
+            const node = CRXB.util.getCurrent('node');
+            const location = CRX.Util.getLaunchpadContextPath()
+                + CRX.Util.getLocalWorkspacePath(node.getRealPath())
+                + '.html?wcmmode=disabled';
+            window.open(location);
+        }
+    });
+    CRX.ide.OpenPageEditAction = new Ext.Action({
+        text: 'In edit mode',
+        handler: () => {
+            const node = CRXB.util.getCurrent('node');
+            const location = CRX.Util.getLaunchpadContextPath().replace(/crx\/de\/?$/i, '')
+                + '/editor.html'
+                + CRX.Util.getLocalWorkspacePath(node.getRealPath()).replace(/\/$/, '')
+                + '.html';
+            window.open(location);
+        }
+    });
+
+    CRX.ide.OpenPageActions = new Ext.menu.Item({
+        text: 'Open page',
+        iconCls: 'action-link',
+        menu: new Ext.menu.Menu({
+            id: 'open_page',
+            cls: 'x-menu-detached',
+            items: [CRX.ide.OpenPageViewAction, CRX.ide.OpenPageEditAction]
+        }),
+    });
+    CRX.ide.OpenPageActions.baseAction = {
+        checkActive: function() {
+            const currentNode = CRXB.util.getCurrent('node');
+            const isPage = currentNode.ui.iconNode.classList.contains('page');
+            const disabled = !currentNode || !isPage;
+            this.setDisabled(disabled);
+        }
+    };
+    return CRX.ide.OpenPageActions;
+}
+
+CRXB.util.getOpenInSiteAdminAction = function() {
+    if (CRX.ide.openInSiteAdminAction) {
+        return CRX.ide.openInSiteAdminAction;
+    }
+    CRX.ide.openInSiteAdminAction = new Ext.Action({
+        text: 'Open in SiteAdmin',
+        iconCls: 'nav-siteadmin',
+        handler: () => {
+            const path = CRXB.util.getCurrent('path');
+            if (!path) {
+                return;
+            }
+            window.open('/siteadmin#' + path, '_blank');
+        }
+    });
+    CRX.ide.openInSiteAdminAction.checkActive = function() {
+        const isContentPath = /^\/content\//.test(CRXB.util.getCurrent('path'));
+        const isPage = CRXB.util.getCurrent('node').ui.iconNode.classList.contains('page');
+        const disabled = !isContentPath || !isPage;
+        this.setDisabled(disabled);
+    };
+
+    return CRX.ide.openInSiteAdminAction;
+};
+
+CRXB.util.getSortAction = function() {
+    if (CRX.ide.SortAction) {
+        return CRX.ide.SortAction;
+    }
+    CRX.ide.SortAction = new Ext.Action({
+        text: 'Sort',
+        iconCls: 'action-sorting-alpha',
+        handler: (alphabetic = true) => {
+            const current = CRXB.util.getCurrent();
+            if (!current) {
+                return;
+            }
+            const currentSortedNodes = GM_getValue('profile:sortedNodes') || [];
+            let sortingChanged = false;
+            if (alphabetic && currentSortedNodes.indexOf(current.path) < 0) {
+                currentSortedNodes.push(current.path);
+                current.node.ui.addClass('sorted');
+                sortingChanged = true;
+            } else if (!alphabetic && currentSortedNodes.indexOf(current.path) >= 0) {
+                currentSortedNodes.splice(currentSortedNodes.indexOf(current.path), 1);
+                current.node.ui.removeClass('sorted');
+                sortingChanged = true;
+            }
+            if (sortingChanged) {
+                GM_setValue('profile:sortedNodes', currentSortedNodes);
+                Ext.getCmp(CRX.ide.TREE_ID).sorter.sortedNodes = currentSortedNodes;
+                CRX.ide.RefreshAction.initialConfig.handler();
+            }
+        }
+    });
+    CRX.ide.SortAction.checkActive = function() {
+        this.setDisabled(CRXB.util.getCurrent('node').ui.getEl().querySelector('div').classList.contains('sorted'));
+    };
+    return CRX.ide.SortAction;
+};
+
+CRXB.util.getUnsortAction = function() {
+    if (CRX.ide.UnsortAction) {
+        return CRX.ide.UnsortAction;
+    }
+    CRX.ide.UnsortAction = new Ext.Action({
+        text: 'Unsort',
+        iconCls: 'action-sorting-default',
+        handler: () => CRX.ide.SortAction.execute(false)
+    });
+    CRX.ide.UnsortAction.checkActive = function() {
+        this.setDisabled(!CRXB.util.getCurrent('node').ui.getEl().querySelector('div').classList.contains('sorted'));
+    };
+    return CRX.ide.UnsortAction;
+};
+
+CRXB.util.getUploadClipboardAction = function() {
+    if (CRX.ide.UploadClipboardAction) {
+        return CRX.ide.UploadClipboardAction;
+    }
+
+    CRX.ide.UploadClipboardAction = new Ext.Action({
+        text: 'Install from Clipboard',
+        iconCls: 'action-upload',
+        handler: async (followSelectedNode) => {
+            await CRXB.util.save();
+
+            followSelectedNode = followSelectedNode === true;
+            const selectedNode = CRXB.util.getCurrent('node');
+            const storedNode = CRX.Clipboard.getData().data;
+
+
+            const storedNodePath = CRXB.util.nodeToJcrPath(storedNode);
+            const selectedNodePath = CRXB.util.nodeToJcrPath(selectedNode);
+            const needsMove  = followSelectedNode
+                && selectedNode
+                && storedNodePath.indexOf(selectedNodePath) !== 0;
+
+            const msg = new CrxProgressFacade('Import resource', 'Please wait');
+
+            const processPackagerSuccess = async (status) => {
+                msg.show(1, 'Finished');
+                msg.hide(500);
+
+                if (!status || !status.jcrPath) {
+                    return;
+                }
+                CRXB.util.findNearestCommon(CRXB.util.getCurrent('node'), status.jcrPath).reload(() => {
+                    CRXB.util.setLocation(status.jcrPath);
+                });
+            };
+
+            const processPackagerFailure = (status) => {
+                const errorMsg = typeof status === 'string'
+                    ?  status
+                    : `Importing of ${status.jcrPath} failed at "${status.stage}": ${status.httpStatus} ${status.message}`;
+                console.error(errorMsg);
+                Ext.Msg.show({
+                    title: 'Error',
+                    msg: errorMsg,
+                    width: 420,
+                    buttons: Ext.MessageBox.OK,
+                    icon: Ext.MessageBox.ERROR
+                });
+            };
+
+            const processPackagerPreInstall = async (status) => {
+                if (!needsMove || !status.blob) {
+                    return status;
+                }
+                const modifier = new CrxPackageModifier();
+                status.blob = await modifier.modify(status.blob, selectedNodePath);
+                return status;
+            };
+
+            const processPackagerStatus = (status) => msg.show(status.completion, status.stage + '... Please wait');
+
+            const doImport = () => {
+                const packager = new CrxPackager({
+                    cleanUp: true,
+                    success: processPackagerSuccess,
+                    failure: processPackagerFailure,
+                    status: processPackagerStatus,
+                    preInstall: processPackagerPreInstall
+                });
+                packager.import(storedNode.propOrigin, storedNodePath);
+            };
+
+            Ext.Msg.show({
+                title: 'Import content?',
+                msg: `The node "<em>${storedNodePath}</em>" in clipboard is coming from another host (${storedNode.propOrigin}).<br><br>
+                       Agree to try and import it as an AEM package?`,
+                width: 420,
+                icon: Ext.MessageBox.QUESTION,
+                buttons: Ext.MessageBox.YESNO,
+                fn: function(btn) {
+                    if (btn === 'yes') {
+                        doImport();
+                    }
+                }
+            });
+        }
+    });
+
+    CRX.ide.UploadClipboardAction.checkActive = function() {
+        const storedNode = CRX.Clipboard.getData().data;
+        const enableAction = storedNode && storedNode.propOrigin && storedNode.propOrigin !== document.location.origin;
+        this.setDisabled(!enableAction);
+    };
+
+    return CRX.ide.UploadClipboardAction;
+};
+
+
 
 CRXB.tweaks.addEnvironmentLabel = function () {
 
@@ -4150,7 +4194,10 @@ CRXB.tweaks.modifyMenus = function() {
 
     const treeContextMenu = Ext.getCmp(CRX.ide.TREE_ID).contextMenu;
     CRXB.util.arrangeMenu(treeContextMenu, [
-        CRXB.util.getOpenPageActions(),
+        CRXB.util.getOpenPageMenu(),
+        CRXB.util.getOpenInSiteAdminAction(),
+        CRXB.util.getDisplayAsMenu(),
+        '-',
         CRX.ide.CreateNodeAction,
         CRX.ide.RenameNodeAction,
         '-',
@@ -4399,12 +4446,11 @@ CRXB.tweaks.openPageInEditMode = function() {
         open: function() {
             const node = CRXB.util.getCurrent().node;
             const openInEditMode = CRXB.settings.get('prefer-edit-mode');
-            const [openStraight, openEdit] = CRXB.util.getOpenPageActions();
 
             if (openInEditMode) {
-                openEdit.execute();
+                CRX.ide.OpenPageEditAction.execute();
             } else {
-                openStraight.execute();
+                CRX.ide.OpenPageViewAction.execute();
             }
         }
     });
@@ -4612,7 +4658,6 @@ CRXB.tweaks.modifyRepositoryTree = function() {
                 GM_setValue('profile:bookmarkedNodes', currentBookmarkedNodes);
             };
             const colorItems = highlightColors.map(col =>  {return {text: col, iconCls: 'action-highlight-' + normalizeColorName(col), handler: () => storeBookmark(col)}; });
-
             this.contextMenu.add([
                 {
                     text: 'Bookmark',

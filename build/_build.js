@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const decomment = require('decomment');
 
+const ACTIONS_PATH = './action';
 const CLASSES_PATH = './class';
 const DIALOGS_PATH = './dialog';
 const FLOWS_PATH = './flow';
@@ -16,7 +17,7 @@ const SVG_PATH = './svg/out';
 const OUT_FILE_PATH = './out/crxde-boost.user.js';
 
 const ENCODING = 'UTF8';
-const CURRENT_VERSION = '0.1.6';
+const CURRENT_VERSION = '0.1.7';
 
 
 const BOOKMARK_SETTINGS = {
@@ -274,6 +275,7 @@ const stream = fs.createWriteStream('./out/crxde-boost.user.js', {flags: 'a'});
     getSettings(),
     getStyles(),
     getDirContents(FLOWS_PATH),
+    getDirContents(ACTIONS_PATH),
     getDirContents(TWEAKS_PATH),
     getFileContents('footer.js'),
 ].forEach(text => {
