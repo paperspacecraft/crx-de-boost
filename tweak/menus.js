@@ -114,7 +114,10 @@ CRXB.tweaks.modifyMenus = function() {
     //
     const treeContextMenu = Ext.getCmp(CRX.ide.TREE_ID).contextMenu;
     CRXB.util.arrangeMenu(treeContextMenu, [
-        CRXB.util.getOpenPageActions(),
+        CRXB.util.getOpenPageMenu(),
+        CRXB.util.getOpenInSiteAdminAction(),
+        CRXB.util.getDisplayAsMenu(),
+        '-',
         CRX.ide.CreateNodeAction,
         CRX.ide.RenameNodeAction,
         '-',

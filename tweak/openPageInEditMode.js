@@ -4,12 +4,11 @@ CRXB.tweaks.openPageInEditMode = function() {
         open: function() {
             const node = CRXB.util.getCurrent().node;
             const openInEditMode = CRXB.settings.get('prefer-edit-mode');
-            const [openStraight, openEdit] = CRXB.util.getOpenPageActions();
 
             if (openInEditMode) {
-                openEdit.execute();
+                CRX.ide.OpenPageEditAction.execute();
             } else {
-                openStraight.execute();
+                CRX.ide.OpenPageViewAction.execute();
             }
         }
     });

@@ -31,8 +31,6 @@ CRXB.tweaks.modifyRepositoryTree = function() {
                 GM_setValue('profile:bookmarkedNodes', currentBookmarkedNodes);
             };
             const colorItems = highlightColors.map(col =>  {return {text: col, iconCls: 'action-highlight-' + normalizeColorName(col), handler: () => storeBookmark(col)}; });
-
-            // Add sorting and highlighting to the context menu
             this.contextMenu.add([
                 {
                     text: 'Bookmark',
