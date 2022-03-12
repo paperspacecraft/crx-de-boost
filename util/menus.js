@@ -2,11 +2,16 @@ CRXB.util.arrangeMenu = function(menu, order, exclude) {
     let position = 0;
     const flatOrder = order.flatMap(item => Array.isArray(item) ? item : [item]);
     for (let item of flatOrder) {
+        // Moving a menu item by its label
         if (typeof item === 'string' && !(item === '-' || item === '->' || item === ' ')) {
             const found = menu.findBy((mnu) => mnu.text === item || mnu.id === item || (mnu.baseAction && mnu.baseAction.text === item));
             if (found && found.length) {
                 menu.insert(position++, found[0]);
             }
+        // Adding a menu item as a pre-formed object
+        } else if (typeof item === 'object' && item.menu && typeof item.menu === 'object') {
+            menu.insert(position++, item);
+        // Adding or moving a menu item made out of an action
         } else if (typeof item === 'object') {
             const found = menu.findBy((mnu) => mnu === item || mnu.baseAction === item);
             if (found && found.length) {
@@ -14,6 +19,7 @@ CRXB.util.arrangeMenu = function(menu, order, exclude) {
             } else {
                 menu.insert(position++, item);
             }
+        // Adding or moving a separator
         } else if (item === '-' || item === '->' || item === ' ') {
             menu.insert(position++, item);
         }

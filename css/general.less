@@ -288,7 +288,10 @@ ul.x-tab-strip-top {
 .x-menu-sep-li+.x-menu-sep-li,
 .hide-disabled .x-menu-list-item.x-item-disabled,
 .hide-disabled .x-menu-sep-li+.x-item-disabled+.x-menu-sep-li,
-    .hide-disabled .x-menu-sep-li+.x-item-disabled+.x-item-disabled+.x-menu-sep-li {
+.hide-disabled .x-menu-sep-li+.x-item-disabled+.x-item-disabled+.x-menu-sep-li,
+.hide-disabled .x-item-disabled:first-child+.x-menu-sep-li,
+.hide-disabled .x-item-disabled:first-child+.x-item-disabled+.x-menu-sep-li,
+.hide-disabled .x-item-disabled:first-child+.x-item-disabled+.x-item-disabled+.x-menu-sep-li {
     display: none;
 }
 

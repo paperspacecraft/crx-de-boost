@@ -56,7 +56,7 @@ class CrxPackager {
             const createUrl = CrxPackager.getEncodedUrl(this.config.endpoints.create, {
                 cmd: 'create',
                 packageName: argument.packageName,
-                groupName: this.config.groupName || 'transient'
+                groupName: this.config.groupName || CrxPackager.DEFAULT_PACKAGE_GROUP
             });
             const createResponse = await fetch(createUrl, {method: 'post'});
             const createResponseJson = createResponse.ok && CrxPackager.isJson(createResponse)
