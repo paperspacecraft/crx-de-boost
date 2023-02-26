@@ -4818,8 +4818,7 @@ CRXB.tweaks.applyStyles = function(scope = ['splash', 'default']) {
                     csv.unshift(fields.join(','));
                     csv = csv.join('\r\n');
                     csv = 'data:text/csv;charset=utf-8,' + csv;
-                    var encodedUri = encodeURI(csv);
-                    window.open(encodedUri);
+                    window.location = encodeURI(csv);
                 });
             }
         });
