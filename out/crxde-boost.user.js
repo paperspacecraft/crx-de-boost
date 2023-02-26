@@ -4788,4 +4788,43 @@ CRXB.tweaks.applyStyles = function(scope = ['splash', 'default']) {
     (CRXB.flows[flow] || CRXB.flows.common)();
 })();
 
+(function() {
+    var origOpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function() {
+        this.addEventListener('load', function() {
+            if(this.responseURL.includes('/crx/de/query.jsp')) {
+                var exportButton = document.querySelector('#export-csv');
+                if(!exportButton) {
+                    var form = document.querySelector('form.x-panel-body.x-panel-body-noheader.x-panel-body-noborder.x-form');
+                    var downloadButton = document.createElement('button');
+                    downloadButton.setAttribute('type', 'button')
+                    downloadButton.setAttribute('id', 'export-csv')
+                    downloadButton.setAttribute('style', `background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><path d="M528 288h-92.1l46.1-46.1c30.1-30.1 8.8-81.9-33.9-81.9h-64V48c0-26.5-21.5-48-48-48h-96c-26.5 0-48 21.5-48 48v112h-64c-42.6 0-64.2 51.7-33.9 81.9l46.1 46.1H48c-26.5 0-48 21.5-48 48v128c0 26.5 21.5 48 48 48h480c26.5 0 48-21.5 48-48V336c0-26.5-21.5-48-48-48zm-400-80h112V48h96v160h112L288 368 128 208zm400 256H48V336h140.1l65.9 65.9c18.8 18.8 49.1 18.7 67.9 0l65.9-65.9H528v128zm-88-64c0-13.3 10.7-24 24-24s24 10.7 24 24-10.7 24-24 24-24-10.7-24-24z"/></svg>'); 
+                    top: 125px;left: 295px;position: absolute;width: 20px;height: 20px;border: none;background-color: transparent;`);
+                    downloadButton.className = "x-btn-text";
+                    form.appendChild(downloadButton);
+                    exportButton = downloadButton;
+                }
+                var response = this.responseText;
+                exportButton.addEventListener('click', function (event) {
+                    var json = JSON.parse(response).results;
+                    var fields = Object.keys(json[0]);
+                    var replacer = function(key, value) { return value === null ? '' : value }
+                    var csv = json.map(function(row) {
+                        return fields.map(function(fieldName) {
+                            return JSON.stringify(row[fieldName], replacer)
+                        }).join(',');
+                    })
+                    csv.unshift(fields.join(','));
+                    csv = csv.join('\r\n');
+                    csv = 'data:text/csv;charset=utf-8,' + csv;
+                    var encodedUri = encodeURI(csv);
+                    window.open(encodedUri);
+                });
+            }
+        });
+        origOpen.apply(this, arguments);
+    };
+})();
+
 
